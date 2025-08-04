@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customer Form</title>
+  <link rel="stylesheet" href="../../node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <style>
+    .error { color: red; font-size: 0.9em; }
+  </style>
+</head>
+<body class="p-4">
+
+  <div class="container border p-4">
+    <h3 class="mb-4">Add Customer</h3>
+    <form id="customerForm">
+      <div class="mb-3">
+        <label for="name" class="form-label">Name:</label>
+        <input type="text" class="form-control" id="name">
+        <div id="nameError" class="error"></div>
+      </div>
+
+      <div class="mb-3">
+        <label for="email" class="form-label">Email Id:</label>
+        <input type="email" class="form-control" id="email">
+        <div id="emailError" class="error"></div>
+      </div>
+
+      <div class="mb-3">
+        <label for="contact" class="form-label">Contact No:</label>
+        <input type="text" class="form-control" id="contact">
+        <div id="contactError" class="error"></div>
+      </div>
+
+      <div class="mb-3">
+        <label for="accountType" class="form-label">Account Type:</label>
+        <select class="form-select" id="accountType">
+          <option value="">Select account type</option>
+          <option value="savings">Savings</option>
+          <option value="current">Current</option>
+        </select>
+        <div id="accountTypeError" class="error"></div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Add Customer</button>
+    </form>
+
+    <hr>
+
+    <h4>Customer List</h4>
+    <table class="table table-bordered mt-3">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Contact</th>
+          <th>Account Type</th>
+        </tr>
+      </thead>
+      <tbody id="customerTableBody"></tbody>
+    </table>
+  </div>
+
+  <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const form = document.getElementById("customerForm");
+    const name = document.getElementById("name");
+    const email = document.getElementById("email");
+    const contact = document.getElementById("contact");
+    const accountType = document.getElementById("accountType");
+
+    const nameError = document.getElementById("nameError");
+    const emailError = document.getElementById("emailError");
+    const contactError = document.getElementById("contactError");
+    const accountTypeError = document.getElementById("accountTypeError");
+    const tableBody = document.getElementById("customerTableBody");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      let valid = true;
+
+      // Reset previous errors
+      nameError.textContent = "";
+      emailError.textContent = "";
+      contactError.textContent = "";
+      accountTypeError.textContent = "";
+
+      // Validate name (alphabets only)
+      if (!/^[A-Za-z\s]+$/.test(name.value.trim())) {
+        nameError.textContent = "Please enter only alphabets";
+        valid = false;
+      }
+
+      // Validate email
+      if (!/^\S+@\S+\.\S+$/.test(email.value.trim())) {
+        emailError.textContent = "Please enter a valid email id";
+        valid = false;
+      }
+
+      // Validate contact number
+      if (!/^[7-9]\d{9}$/.test(contact.value.trim())) {
+        contactError.textContent = "Please enter valid 10-digit contact starting with 7-9";
+        valid = false;
+      }
+
+      // Validate account type
+      if (accountType.value === "") {
+        accountTypeError.textContent = "Please select an account type";
+        valid = false;
+      }
+
+      if (valid) {
+        // Create new row
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${name.value.trim()}</td>
+          <td>${email.value.trim()}</td>
+          <td>${contact.value.trim()}</td>
+          <td>${accountType.value}</td>
+        `;
+        tableBody.appendChild(row);
+
+        // Clear form
+        form.reset();
+      }
+    });
+  </script>
+</body>
+</html>
