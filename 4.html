@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customer Testimonials</title>
+  <link rel="stylesheet" href="../../node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <style>
+    .error { color: red; font-size: 0.9em; }
+  </style>
+</head>
+<body class="p-4">
+
+  <div class="container border p-4">
+    <h3 class="mb-4" id="formTitle">Submit Testimonial</h3>
+    <form id="testimonialForm">
+      <div class="mb-3">
+        <label for="name" class="form-label">Name:</label>
+        <input type="text" class="form-control" id="name">
+        <div id="nameError" class="error"></div>
+      </div>
+
+      <div class="mb-3">
+        <label for="feedback" class="form-label">Feedback:</label>
+        <textarea class="form-control" id="feedback" rows="4"></textarea>
+        <div id="feedbackError" class="error"></div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submitBtn">Submit</button>
+    </form>
+
+    <hr>
+
+    <h4>Customer Testimonials</h4>
+    <table class="table table-bordered mt-3">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Feedback</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="testimonialTableBody"></tbody>
+    </table>
+  </div>
+
+  <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const form = document.getElementById("testimonialForm");
+    const name = document.getElementById("name");
+    const feedback = document.getElementById("feedback");
+    const nameError = document.getElementById("nameError");
+    const feedbackError = document.getElementById("feedbackError");
+    const tableBody = document.getElementById("testimonialTableBody");
+    const submitBtn = document.getElementById("submitBtn");
+    const formTitle = document.getElementById("formTitle");
+
+    let editIndex = null;
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      let valid = true;
+      nameError.textContent = "";
+      feedbackError.textContent = "";
+
+      // Validate Name
+      if (!/^[A-Za-z\s]+$/.test(name.value.trim())) {
+        nameError.textContent = "Please enter a valid name (alphabets only)";
+        valid = false;
+      }
+
+      // Validate Feedback
+      if (feedback.value.trim().length < 5) {
+        feedbackError.textContent = "Feedback must be at least 5 characters";
+        valid = false;
+      }
+
+      if (valid) {
+        if (editIndex === null) {
+          // Add new testimonial
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${name.value.trim()}</td>
+            <td>${feedback.value.trim()}</td>
+            <td>
+              <button class="btn btn-sm btn-warning editBtn">Edit</button>
+              <button class="btn btn-sm btn-danger deleteBtn ms-2">Delete</button>
+            </td>
+          `;
+          tableBody.appendChild(row);
+        } else {
+          // Update existing testimonial
+          const row = tableBody.children[editIndex];
+          row.children[0].textContent = name.value.trim();
+          row.children[1].textContent = feedback.value.trim();
+
+          editIndex = null;
+          submitBtn.textContent = "Submit";
+          formTitle.textContent = "Submit Testimonial";
+        }
+
+        form.reset();
+      }
+    });
+
+    // Handle Edit & Delete buttons
+    tableBody.addEventListener("click", function (e) {
+      const row = e.target.closest("tr");
+
+      if (e.target.classList.contains("editBtn")) {
+        editIndex = Array.from(tableBody.children).indexOf(row);
+        name.value = row.children[0].textContent;
+        feedback.value = row.children[1].textContent;
+        submitBtn.textContent = "Update";
+        formTitle.textContent = "Edit Testimonial";
+      }
+
+      if (e.target.classList.contains("deleteBtn")) {
+        if (editIndex !== null && row === tableBody.children[editIndex]) {
+          form.reset();
+          editIndex = null;
+          submitBtn.textContent = "Submit";
+          formTitle.textContent = "Submit Testimonial";
+        }
+        tableBody.removeChild(row);
+      }
+    });
+  </script>
+</body>
+</html>
