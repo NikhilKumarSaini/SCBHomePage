@@ -1,174 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Home Loan Application</title>
-  <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
-  <style>
-    .form-section {
-      background-color: #f8f9fa;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+  <link href="../node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script>
+    function calculateAge() {
+      const dob = document.getElementById('dob').value;
+      if (!dob) return;
+      const dobDate = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - dobDate.getFullYear();
+      const m = today.getMonth() - dobDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+        age--;
+      }
+      document.getElementById('age').value = age;
     }
-    .required::after {
-      content: "*";
-      color: red;
+
+    function togglePermanentAddress() {
+      const checkbox = document.getElementById('sameAddress');
+      const permanent = document.getElementById('permanentAddress');
+      if (checkbox.checked) {
+        permanent.value = document.getElementById('currentAddress').value;
+        permanent.setAttribute("readonly", true);
+      } else {
+        permanent.value = "";
+        permanent.removeAttribute("readonly");
+      }
     }
-    footer {
-      margin-top: 40px;
-      padding: 20px;
-      background-color: #f1f1f1;
-      text-align: center;
-      font-size: 14px;
-      color: #555;
-    }
-  </style>
+  </script>
 </head>
 <body>
-
   <!-- Header -->
-  <nav class="navbar navbar-expand-lg navbar-light bg-light px-4">
-    <a class="navbar-brand" href="#">
-      <img src="logo.png" alt="Company Logo" width="120">
-    </a>
-    <div class="ms-auto dropdown">
-      <a class="btn btn-light dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-        <img src="profile.png" alt="Profile" width="32" height="32" class="rounded-circle">
+  <nav class="navbar navbar-expand-lg navbar-light bg-light shadow">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">
+        <img src="logo.png" alt="Logo" width="40" height="40" />
+        HomeLoan Portal
       </a>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" href="#">My Profile</a></li>
-        <li><a class="dropdown-item" href="#">Settings</a></li>
-        <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item" href="#">Logout</a></li>
-      </ul>
+      <div class="dropdown ms-auto">
+        <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <img src="profile-icon.png" alt="Profile" width="30" height="30" class="rounded-circle" />
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="#">My Profile</a></li>
+          <li><a class="dropdown-item" href="#">Settings</a></li>
+          <li><hr class="dropdown-divider" /></li>
+          <li><a class="dropdown-item" href="#">Logout</a></li>
+        </ul>
+      </div>
     </div>
   </nav>
 
-  <!-- Form -->
+  <!-- Main Form -->
   <div class="container mt-4 mb-5">
-    <h2 class="mb-4 text-center">Home Loan Application Form</h2>
-    <form class="form-section">
-      <!-- Full Name and Government ID -->
-      <div class="row">
+    <h2 class="mb-4">Home Loan Application</h2>
+    <form>
+      <!-- Name & Government ID -->
+      <div class="row mb-3">
         <div class="col-md-6">
-          <label class="form-label required">Full Name (as per PAN)</label>
-          <div class="row">
+          <label class="form-label">Full Name (as per PAN)</label>
+          <div class="row g-2">
             <div class="col">
-              <input type="text" class="form-control" placeholder="First Name" required>
+              <input type="text" class="form-control" placeholder="First Name *" required />
             </div>
             <div class="col">
-              <input type="text" class="form-control" placeholder="Middle Name">
+              <input type="text" class="form-control" placeholder="Middle Name" />
             </div>
             <div class="col">
-              <input type="text" class="form-control" placeholder="Last Name" required>
+              <input type="text" class="form-control" placeholder="Last Name *" required />
             </div>
           </div>
         </div>
         <div class="col-md-6">
-          <label class="form-label required">Government IDs</label>
-          <input type="text" class="form-control mb-2" placeholder="Aadhar Number">
-          <input type="text" class="form-control mb-2" placeholder="PAN Number">
-          <input type="text" class="form-control" placeholder="Passport Number (if any)">
+          <label class="form-label">Government IDs</label>
+          <input type="text" class="form-control mb-2" placeholder="Aadhar Number" />
+          <input type="text" class="form-control mb-2" placeholder="PAN Number" />
+          <input type="text" class="form-control" placeholder="Passport Number (if any)" />
         </div>
       </div>
 
-      <!-- Gender and Marital Status -->
-      <div class="row mt-4">
-        <div class="col-md-6">
-          <label class="form-label required">Gender</label>
+      <!-- Gender & DOB -->
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label class="form-label">Gender</label>
           <select class="form-select" required>
-            <option value="">Choose...</option>
+            <option selected disabled>Choose...</option>
             <option>Male</option>
             <option>Female</option>
             <option>Others</option>
           </select>
         </div>
-        <div class="col-md-6">
-          <label class="form-label required">Marital Status</label>
-          <select class="form-select" required>
-            <option value="">Choose...</option>
-            <option>Single</option>
-            <option>Married</option>
-            <option>Divorced</option>
-            <option>Other</option>
-          </select>
+        <div class="col-md-4">
+          <label class="form-label">Date of Birth (DD-MM-YYYY)</label>
+          <input type="date" class="form-control" id="dob" onchange="calculateAge()" required />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Age</label>
+          <input type="text" class="form-control" id="age" readonly />
         </div>
       </div>
 
-      <!-- DOB and Age -->
-      <div class="row mt-4">
-        <div class="col-md-6">
-          <label class="form-label required">Date of Birth</label>
-          <input type="date" class="form-control" id="dob" required>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label required">Age</label>
-          <input type="text" class="form-control" id="age" readonly>
-        </div>
+      <!-- Address Section -->
+      <div class="mb-3">
+        <label class="form-label">Current Address</label>
+        <textarea class="form-control" id="currentAddress" rows="2"></textarea>
+      </div>
+      <div class="form-check mb-2">
+        <input class="form-check-input" type="checkbox" id="sameAddress" onchange="togglePermanentAddress()" />
+        <label class="form-check-label" for="sameAddress">
+          Same as Current Address
+        </label>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Permanent Address</label>
+        <textarea class="form-control" id="permanentAddress" rows="2"></textarea>
       </div>
 
-      <!-- Address -->
-      <div class="row mt-4">
-        <div class="col-md-6">
-          <label class="form-label required">Current Address</label>
-          <textarea class="form-control" id="currentAddress" required></textarea>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Permanent Address</label>
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="sameAddress">
-            <label class="form-check-label" for="sameAddress">Same as current address</label>
-          </div>
-          <textarea class="form-control" id="permanentAddress"></textarea>
-        </div>
+      <!-- Marital Status -->
+      <div class="mb-3">
+        <label class="form-label">Marital Status</label>
+        <select class="form-select" required>
+          <option selected disabled>Choose...</option>
+          <option>Single</option>
+          <option>Married</option>
+          <option>Divorced</option>
+          <option>Other</option>
+        </select>
       </div>
 
       <!-- Attachments -->
-      <div class="row mt-4">
-        <div class="col-md-4">
-          <label class="form-label required">Photograph</label>
-          <input type="file" class="form-control" required>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label required">Identity Proof</label>
-          <select class="form-select mb-2" required>
-            <option value="">Select</option>
+      <div class="mb-3">
+        <label class="form-label">Photograph</label>
+        <input class="form-control" type="file" accept="image/*" required />
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Identity Proof Type</label>
+          <select class="form-select">
             <option>Aadhar</option>
             <option>PAN</option>
             <option>Passport</option>
             <option>Voter ID</option>
             <option>Driving Licence</option>
           </select>
-          <input type="file" class="form-control" required>
+          <input class="form-control mt-2" type="file" />
         </div>
-        <div class="col-md-4">
-          <label class="form-label required">Address Proof</label>
-          <select class="form-select mb-2" required>
-            <option value="">Select</option>
+        <div class="col-md-6">
+          <label class="form-label">Address Proof Type</label>
+          <select class="form-select">
             <option>Aadhar</option>
-            <option>Utility Bills</option>
+            <option>Utility Bill</option>
             <option>Rental Agreement</option>
             <option>Passport</option>
           </select>
-          <input type="file" class="form-control" required>
+          <input class="form-control mt-2" type="file" />
         </div>
       </div>
 
-      <!-- Sale Agreement & EC -->
-      <div class="row mt-4">
-        <div class="col-md-6">
-          <label class="form-label required">Sale Agreement</label>
-          <input type="file" class="form-control" required>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label required">Encumbrance Certificate (EC)</label>
-          <input type="file" class="form-control" required>
-        </div>
+      <div class="mb-3">
+        <label class="form-label">Sale Agreement <span class="text-danger">*</span></label>
+        <input class="form-control" type="file" required />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Encumbrance Certificate (EC) <span class="text-danger">*</span></label>
+        <input class="form-control" type="file" required />
       </div>
 
       <!-- Buttons -->
-      <div class="d-flex justify-content-end mt-5">
+      <div class="d-flex justify-content-end">
         <button type="submit" class="btn btn-success me-2">Submit</button>
         <button type="button" class="btn btn-primary">Next</button>
       </div>
@@ -176,31 +180,10 @@
   </div>
 
   <!-- Footer -->
-  <footer>
-    &copy; 2025 Standard Chartered. All rights reserved.
+  <footer class="bg-light text-center py-3 mt-5 shadow-sm">
+    &copy; 2025 HomeLoan Portal. All rights reserved.
   </footer>
 
-  <!-- Bootstrap JS -->
   <script src="../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    // Auto calculate age from DOB
-    document.getElementById('dob').addEventListener('change', function () {
-      const dob = new Date(this.value);
-      const today = new Date();
-      let age = today.getFullYear() - dob.getFullYear();
-      const m = today.getMonth() - dob.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-        age--;
-      }
-      document.getElementById('age').value = age;
-    });
-
-    // Copy address if checkbox selected
-    document.getElementById('sameAddress').addEventListener('change', function () {
-      const current = document.getElementById('currentAddress').value;
-      document.getElementById('permanentAddress').value = this.checked ? current : '';
-    });
-  </script>
-
 </body>
 </html>
