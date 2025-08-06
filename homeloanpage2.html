@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Home Loan Application Form</title>
+  <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding: 30px;
+    }
+    .form-section {
+      background: #fff;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    .form-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #343a40;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="form-section">
+      <div class="form-title">Home Loan Application Form</div>
+
+      <!-- Row: Full Name and Govt ID -->
+      <div class="row">
+        <!-- Full Name -->
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Full Name (As per PAN)</label>
+            <div class="row">
+              <div class="col">
+                <input type="text" class="form-control" placeholder="First Name" required>
+              </div>
+              <div class="col">
+                <input type="text" class="form-control" placeholder="Middle Name">
+              </div>
+              <div class="col">
+                <input type="text" class="form-control" placeholder="Last Name" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gender -->
+          <div class="mb-3">
+            <label class="form-label">Gender</label>
+            <select class="form-select" required>
+              <option value="" disabled selected>Select</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Others</option>
+            </select>
+          </div>
+
+          <!-- DOB and Age -->
+          <div class="mb-3">
+            <label class="form-label">Date of Birth</label>
+            <input type="date" id="dob" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Age</label>
+            <input type="text" id="age" class="form-control" readonly>
+          </div>
+
+          <!-- Marital Status -->
+          <div class="mb-3">
+            <label class="form-label">Marital Status</label>
+            <select class="form-select" required>
+              <option value="" disabled selected>Select</option>
+              <option>Single</option>
+              <option>Married</option>
+              <option>Divorced</option>
+              <option>Others</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Govt ID Section -->
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Aadhaar Number</label>
+            <input type="text" class="form-control" placeholder="Enter Aadhaar Number" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">PAN Number</label>
+            <input type="text" class="form-control" placeholder="Enter PAN Number" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Passport Number (if any)</label>
+            <input type="text" class="form-control" placeholder="Enter Passport Number">
+          </div>
+        </div>
+      </div>
+
+      <!-- Address Section -->
+      <div class="form-title mt-4">Address Information</div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Current Address</label>
+          <textarea class="form-control" rows="3" placeholder="Enter your current address" required></textarea>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Permanent Address</label>
+          <textarea class="form-control" rows="3" placeholder="Enter your permanent address" required></textarea>
+        </div>
+      </div>
+
+      <!-- Attachment Section -->
+      <div class="form-title mt-4">Attachments</div>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Upload Photograph</label>
+          <input type="file" class="form-control" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">ID Proof Type</label>
+          <select class="form-select" required>
+            <option value="" disabled selected>Select ID Proof</option>
+            <option>Aadhaar</option>
+            <option>PAN</option>
+            <option>Passport</option>
+            <option>Voter ID</option>
+            <option>Driving Licence</option>
+          </select>
+          <input type="file" class="form-control mt-2" required>
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Address Proof Type</label>
+          <select class="form-select" required>
+            <option value="" disabled selected>Select Address Proof</option>
+            <option>Aadhaar</option>
+            <option>Utility Bill</option>
+            <option>Rental Agreement</option>
+            <option>Passport</option>
+          </select>
+          <input type="file" class="form-control mt-2" required>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="text-end mt-4">
+        <button class="btn btn-primary px-5">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("dob").addEventListener("change", function() {
+      const dob = new Date(this.value);
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+        age--;
+      }
+      document.getElementById("age").value = age;
+    });
+  </script>
+
+</body>
+</html>
