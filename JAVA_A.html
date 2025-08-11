@@ -1,0 +1,36 @@
+public class Account {
+    String accountNum;
+    String accountOwner;
+    double balance;
+
+    // Parameterized Constructor
+    public Account(String accountNum, String accountOwner, double balance) {
+        this.accountNum = accountNum;
+        this.accountOwner = accountOwner;
+        this.balance = balance;
+    }
+
+    // Method to perform payment (withdraw)
+    public void performPayment(double amount) {
+        if (amount > 0 && amount <= balance) {
+            balance -= amount;
+            System.out.println(amount + " withdrawn successfully.");
+        } else {
+            System.out.println("Insufficient balance or invalid amount.");
+        }
+    }
+
+    // Method to perform deposit
+    public void performDeposit(double amount) {
+        if (amount > 0) {
+            balance += amount;
+            System.out.println(amount + " deposited successfully.");
+        } else {
+            System.out.println("Invalid deposit amount.");
+        }
+    }
+
+    public double getBalance() {
+        return balance;
+    }
+}
