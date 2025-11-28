@@ -1,0 +1,301 @@
+AI System to Detect Manipulated Bank Statements Using Image Forensics & Machine Learning
+
+
+---
+
+1️⃣ Problem Statement (Short & Clear)
+
+Banks receive thousands of bank statements and financial documents during loan processing.
+Many applicants edit PDFs/images using Photoshop/Canva to fake salary, account balance, or transactions.
+Manual verification cannot detect subtle manipulations.
+
+We need an AI-based system that automatically analyzes a bank statement and detects whether it has been edited or tampered using image forensics + ML.
+
+
+---
+
+2️⃣ Solution Overview (What our system will do)
+
+Our solution is an end-to-end AI pipeline that:
+
+✔ Converts PDFs to images
+
+✔ Extracts text using OCR
+
+✔ Applies Image Forensics techniques:
+
+Error Level Analysis (ELA)
+
+Noise pattern analysis
+
+Compression difference
+
+Metadata & timestamp check
+
+Font & alignment consistency check
+
+
+✔ ML Model
+
+Trains a classifier to detect whether a document is genuine or manipulated.
+
+✔ Final Output
+
+Tampering Score (0–100)
+
+Highlighted suspicious areas
+
+Reasons (font mismatch, ELA anomaly, compression difference)
+
+OCR text summary (optional)
+
+
+This will act as a fraud detection layer for banks/fintech companies.
+
+
+---
+
+3️⃣ High-Level Architecture Diagram
+
+(This image is illustrative—your flow will follow the same pipeline.)
+
+
+---
+
+4️⃣ Detailed Architecture (Text Form)
+
+Step-by-Step Pipeline
+
+1. Document Ingestion
+
+User uploads PDF or image.
+
+PDF is converted to PNG/JPG.
+
+
+2. Preprocessing
+
+Resize + Normalize
+
+Remove noise
+
+Segment important regions (amounts, tables)
+
+
+3. Image Forensics Engine
+
+Includes 5 modules:
+
+1. ELA (Error Level Analysis)
+Highlights edited or recompressed areas.
+
+
+2. Noise Analysis
+Detects irregular noise in tampered areas.
+
+
+3. JPEG Artifact Analysis
+If only parts of document were re-saved, compression changes.
+
+
+4. Metadata Extraction
+Detect if PDF was edited in Photoshop/Canva.
+
+
+5. Font Consistency Analysis
+Amount/Name fields are checked for font-size differences.
+
+
+
+4. OCR Engine
+
+Extracts text using Tesseract or EasyOCR
+
+Compares extracted text with typical bank patterns
+
+
+5. ML Classification
+
+A hybrid model:
+
+CNN on ELA image
+
+RandomForest/XGBoost on forensic features
+
+Combined to predict “Real / Fake”
+
+
+6. Report Generation
+
+Fraud score
+
+Highlighted tampered regions
+
+PDF summary
+
+Reasons for detection
+
+
+
+---
+
+5️⃣ What Work Will Be Done (Team Responsibilities)
+
+👤 Member 1 – Forensics & ML (You)
+
+Dataset creation (genuine + fake statements)
+
+Implement PDF → image converter
+
+Image Forensics (ELA, noise, compression)
+
+Build ML model (baseline + improved)
+
+
+👤 Member 2 – OCR + App + Visualization
+
+OCR pipeline
+
+Streamlit/React-based UI
+
+Visualization of tampered zones
+
+Deployment (optional)
+
+
+🟦 Common Tasks
+
+Documentation
+
+Model training
+
+Report generation
+
+Open-source release
+
+
+
+---
+
+6️⃣ Data Sources (Clearly Stated)
+
+We are NOT using real bank customer data.
+Only safe, public, or synthetic data.
+
+1. Synthetic Bank Statements
+
+Build our own bank statement templates using Python or HTML
+
+Generate 200–300 genuine statements
+
+Create tampered versions by:
+
+Changing amounts
+
+Editing text
+
+Copy-paste from other documents
+
+Adding artificial compression
+
+
+
+2. Public Sample Statements
+
+Download masked/dummy statement PDFs from:
+
+HDFC, ICICI, SBI sample formats
+
+Global open sample PDFs
+
+
+3. Open Data (Optional)
+
+Use transaction datasets from Kaggle to generate realistic tables.
+
+Dataset Size Goal
+
+200 genuine
+
+600 tampered variants
+
+~800 total images
+
+
+
+---
+
+7️⃣ Tech Stack
+
+ML + Forensics
+
+Python
+
+OpenCV
+
+PIL
+
+NumPy
+
+scikit-learn
+
+PyTorch (for CNN)
+
+
+OCR
+
+Tesseract OCR
+
+EasyOCR
+
+
+Metadata
+
+PyPDF2
+
+exiftool
+
+
+Web App
+
+Streamlit or FastAPI
+
+Optional: React frontend
+
+
+Deployment
+
+GitHub
+
+Docker
+
+Streamlit Cloud / Render / Azure
+
+
+
+---
+
+8️⃣ Final Deliverables
+
+✔ AI Model (real vs fake detection)
+
+✔ Forensics module (ELA, metadata, font check)
+
+✔ OCR module
+
+✔ Demo web app
+
+✔ Architecture diagram
+
+✔ PDF report generation
+
+✔ Dataset (synthetic + tampered)
+
+✔ Open-source GitHub repository
+
+
+---
+
+9️⃣ Summary
+
+“We are building an AI system that uses image forensics and machine learning to automatically detect manipulated or fake bank statements, using synthetic data, OCR, ELA, metadata analysis and a classification model. The solution will be provided as a working demo + open-source toolkit.
