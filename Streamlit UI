@@ -214,3 +214,412 @@ st.markdown("""
 Made for Standard Chartered Bank | AI Forensic System Prototype
 </div>
 """, unsafe_allow_html=True)
+
+
+,.........................
+
+
+.
+
+# app.py
+import streamlit as st
+from PIL import Image, ImageChops
+import io
+import os
+import base64
+import time
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+st.set_page_config(page_title="AI Bank Statement Forensics",
+                   page_icon="💳", layout="wide")
+
+# -----------------------------
+# Helper: optional libraries
+# -----------------------------
+HAS_PDF2IMG = True
+HAS_PYTESSERACT = True
+HAS_FPDF = True
+try:
+    from pdf2image import convert_from_path
+except Exception:
+    HAS_PDF2IMG = False
+
+try:
+    import pytesseract
+except Exception:
+    HAS_PYTESSERACT = False
+
+try:
+    from fpdf import FPDF
+except Exception:
+    HAS_FPDF = False
+
+# -----------------------------
+# SCB Colors & CSS
+# -----------------------------
+SCB_BLUE = "#0033A0"
+SCB_GREEN = "#00A859"
+BG = "#F5F7FA"
+TEXT = "#1A1A1A"
+
+st.markdown(f"""
+<style>
+/* Page background */
+[data-testid="stAppViewContainer"] {{
+    background-color: {BG};
+}}
+.navbar {{
+    background: linear-gradient(90deg, {SCB_BLUE}, {SCB_GREEN});
+    padding: 12px 22px;
+    border-radius: 8px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    color: white;
+    font-size:18px;
+    font-weight:700;
+}}
+.block-container {{
+    padding-top: 1rem;
+}}
+.uploadbox {{
+    border: 2px dashed {SCB_BLUE};
+    background-color: #FFFFFF;
+    padding: 28px;
+    border-radius: 12px;
+    text-align:center;
+}}
+.stButton>button {{
+    background-color: {SCB_BLUE};
+    color: white;
+    padding: 10px 20px;
+    font-size: 15px;
+    border-radius: 8px;
+}}
+.stButton>button:hover {{
+    background-color: {SCB_GREEN};
+}}
+h1, h2, h3 {{
+    color: {SCB_BLUE};
+}}
+.result-card {{
+    background: white;
+    padding: 18px;
+    border-radius: 10px;
+    box-shadow: 0px 2px 7px rgba(0,0,0,0.08);
+    margin-bottom: 14px;
+}}
+.result-good {{ border-left: 6px solid #2ecc71; }}
+.result-bad {{ border-left: 6px solid #e74c3c; }}
+</style>
+""", unsafe_allow_html=True)
+
+# -----------------------------
+# Logo helper (base64)
+# -----------------------------
+def load_logo_base64(path="logo.png"):
+    if os.path.exists(path):
+        try:
+            with open(path, "rb") as f:
+                data = f.read()
+            return base64.b64encode(data).decode()
+        except Exception:
+            return None
+    # fallback remote SC logo (public)
+    return "https://upload.wikimedia.org/wikipedia/commons/5/5b/Standard_Chartered.png"
+
+logo_b64 = load_logo_base64("logo.png")
+
+# -----------------------------
+# Navbar
+# -----------------------------
+if logo_b64 and logo_b64.startswith("http"):
+    img_tag = f'<img src="{logo_b64}" height="36">'
+else:
+    img_tag = f'<img src="data:image/png;base64,{logo_b64}" height="36">'
+
+st.markdown(f"""
+<div class="navbar">
+    {img_tag}
+    AI Bank Statement Forensic Analyzer
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("<br/>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align:center;margin-top:6px;'>Detect Manipulated Bank Statements</h2>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:#007F7B;'>Image Forensics + Machine Learning prototype</p>", unsafe_allow_html=True)
+
+# -----------------------------
+# Utility Functions
+# -----------------------------
+def pdf_to_image_bytes(file_bytes):
+    """Convert first page of PDF bytes to PIL Image. Requires pdf2image."""
+    if not HAS_PDF2IMG:
+        raise RuntimeError("pdf2image not installed")
+    # write to temp
+    tmp_path = "tmp_upload.pdf"
+    with open(tmp_path, "wb") as f:
+        f.write(file_bytes)
+    pages = convert_from_path(tmp_path, dpi=200, first_page=1, last_page=1)
+    if pages:
+        return pages[0]
+    raise RuntimeError("Failed to convert PDF")
+
+def image_file_to_pil(uploaded_file):
+    """Accepts uploaded file (BytesIO) and returns PIL Image."""
+    if uploaded_file.type == "application/pdf":
+        img = pdf_to_image_bytes(uploaded_file.getvalue())
+        return img
+    else:
+        img = Image.open(uploaded_file)
+        return img.convert("RGB")
+
+def ela_image(pil_img, resave_quality=90):
+    """Return ELA image (PIL) and simple ELA stats."""
+    # Save to bytes at lower quality
+    orig = pil_img.convert("RGB")
+    buf1 = io.BytesIO()
+    orig.save(buf1, format="JPEG", quality=95)
+    buf1.seek(0)
+    buf2 = io.BytesIO()
+    orig.save(buf2, format="JPEG", quality=resave_quality)
+    buf2.seek(0)
+    im1 = Image.open(buf1).convert("RGB")
+    im2 = Image.open(buf2).convert("RGB")
+    diff = ImageChops.difference(im1, im2)
+    # amplify
+    diff_np = np.array(diff).astype(np.float32)
+    maxv = diff_np.max() if diff_np.max() != 0 else 1.0
+    scale = 255.0 / maxv
+    ela_np = np.clip(diff_np * scale, 0, 255).astype(np.uint8)
+    ela_pil = Image.fromarray(ela_np)
+    # stats
+    mean_val = ela_np.mean()
+    std_val = ela_np.std()
+    return ela_pil, float(mean_val), float(std_val)
+
+def simple_heatmap_from_ela(ela_np):
+    """Create a matplotlib heatmap from ELA numpy array and return bytes."""
+    fig, ax = plt.subplots(figsize=(6,6))
+    ax.imshow(ela_np, cmap='hot')
+    ax.axis('off')
+    buf = io.BytesIO()
+    plt.savefig(buf, bbox_inches='tight', pad_inches=0.0, dpi=150)
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+def run_ocr(pil_img):
+    if not HAS_PYTESSERACT:
+        return "pytesseract not installed"
+    try:
+        text = pytesseract.image_to_string(pil_img)
+        return text
+    except Exception as e:
+        return f"OCR error: {e}"
+
+def generate_report_dict(filename, is_image, meta, ela_mean, ela_std, ocr_text, risk_score, reasons):
+    return {
+        "filename": filename,
+        "is_image": is_image,
+        "metadata": meta,
+        "ela_mean": ela_mean,
+        "ela_std": ela_std,
+        "ocr_preview": (ocr_text[:300] + "...") if isinstance(ocr_text, str) and len(ocr_text)>300 else ocr_text,
+        "risk_score": risk_score,
+        "reasons": "; ".join(reasons)
+    }
+
+def create_csv_bytes(report_dict):
+    df = pd.DataFrame([report_dict])
+    return df.to_csv(index=False).encode('utf-8')
+
+def create_json_bytes(report_dict):
+    return (pd.Series(report_dict).to_json()).encode('utf-8')
+
+def create_pdf_bytes(report_dict, ela_img_bytes=None):
+    # Try to make PDF with fpdf if available
+    if not HAS_FPDF:
+        # fallback to TXT bytes
+        txt = "\n".join([f"{k}: {v}" for k,v in report_dict.items()])
+        return txt.encode('utf-8'), "txt"
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(0, 8, "Forensic Analysis Report", ln=True)
+    pdf.ln(4)
+    for k, v in report_dict.items():
+        if k == "ocr_preview":
+            pdf.multi_cell(0, 6, f"{k}: {v}")
+        else:
+            pdf.cell(0, 6, f"{k}: {v}", ln=True)
+    if ela_img_bytes is not None:
+        try:
+            # insert ela image (save to temp)
+            pdf.image(ela_img_bytes, x=10, y=None, w=180)
+        except Exception:
+            pass
+    out = pdf.output(dest='S').encode('latin-1')
+    return out, "pdf"
+
+# -----------------------------
+# Upload UI
+# -----------------------------
+with st.container():
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.markdown("<div class='uploadbox'>", unsafe_allow_html=True)
+        uploaded_file = st.file_uploader("Upload Bank Statement (PDF / PNG / JPG / JPEG)", type=["pdf","png","jpg","jpeg"])
+        st.markdown("</div>", unsafe_allow_html=True)
+        analyze_btn = st.button("🔍 Start Forensic Analysis")
+
+# -----------------------------
+# Analysis & Result Display
+# -----------------------------
+if analyze_btn:
+    if uploaded_file is None:
+        st.error("Please upload a file first.")
+    else:
+        st.success("File received. Starting analysis...")
+        progress = st.progress(0)
+        status = st.empty()
+
+        # Step 1: Convert / Load image
+        status.info("Step 1/5 — Loading document...")
+        progress.progress(10)
+        time.sleep(0.4)
+        try:
+            pil_img = image_file_to_pil(uploaded_file)
+            is_image = True
+        except Exception as e:
+            st.error(f"Failed to read file: {e}")
+            is_image = False
+            pil_img = None
+
+        # Step 2: Metadata extraction
+        status.info("Step 2/5 — Extracting metadata...")
+        progress.progress(30)
+        time.sleep(0.4)
+        metadata = {}
+        try:
+            metadata['filename'] = uploaded_file.name
+            metadata['type'] = uploaded_file.type
+            metadata['size_bytes'] = len(uploaded_file.getvalue())
+        except Exception:
+            metadata = {"info": "metadata unavailable"}
+
+        # Step 3: ELA
+        status.info("Step 3/5 — Running Error Level Analysis (ELA)...")
+        progress.progress(50)
+        time.sleep(0.5)
+        ela_pil, ela_mean, ela_std = None, None, None
+        if pil_img is not None:
+            try:
+                ela_pil, ela_mean, ela_std = ela_image(pil_img, resave_quality=85)
+            except Exception as e:
+                st.warning(f"ELA failed: {e}")
+        else:
+            st.warning("No image data for ELA.")
+
+        # Step 4: OCR
+        status.info("Step 4/5 — OCR extraction (if available)...")
+        progress.progress(70)
+        time.sleep(0.4)
+        ocr_text = ""
+        if pil_img is not None:
+            try:
+                ocr_text = run_ocr(pil_img)
+            except Exception as e:
+                ocr_text = f"OCR error: {e}"
+        else:
+            ocr_text = "No OCR (no image)."
+
+        # Step 5: Simple heuristic + ML placeholder
+        status.info("Step 5/5 — Risk scoring & summary...")
+        progress.progress(90)
+        time.sleep(0.6)
+        reasons = []
+        risk_score = 0.0
+        # Heuristics (simple to start)
+        if ela_mean is not None:
+            # higher mean & std likely more tampering
+            risk_score = min(100, (ela_mean * 0.6 + ela_std * 0.3))
+            if ela_mean > 8:
+                reasons.append("High ELA mean (possible recompression/edit).")
+            if ela_std > 12:
+                reasons.append("High ELA std (localised differences).")
+        else:
+            reasons.append("ELA not available")
+
+        if uploaded_file.type == "application/pdf" and not HAS_PDF2IMG:
+            reasons.append("PDF provided but pdf2image not installed (visual checks limited).")
+
+        # simple metadata heuristic
+        if uploaded_file.type.startswith("image"):
+            # if image large or weird extension
+            if metadata.get("size_bytes", 0) > 2_000_000:
+                reasons.append("Large image size (possible edited screenshot).")
+
+        # add OCR inconsistency heuristic example
+        if isinstance(ocr_text, str) and ("₹" in ocr_text or "INR" in ocr_text or "Balance" in ocr_text):
+            # presence of keywords is normal; we don't flag here. placeholder.
+            pass
+
+        # threshold
+        fake_detected = risk_score > 25 or ("Photoshop" in str(metadata))
+        progress.progress(100)
+        status.success("Analysis completed")
+
+        # Build report
+        report = generate_report_dict(uploaded_file.name, True, metadata, ela_mean, ela_std, ocr_text, round(risk_score,2), reasons)
+
+        # Display results
+        st.markdown("<br/>", unsafe_allow_html=True)
+        colA, colB = st.columns([1,2])
+        with colA:
+            if fake_detected:
+                st.markdown("<div class='result-card result-bad'><h4>🚨 Manipulation Detected</h4><b>Risk Score:</b> {}%</div>".format(round(risk_score,2)), unsafe_allow_html=True)
+                st.write("**Reasons:**")
+                for r in reasons:
+                    st.write(f"- {r}")
+            else:
+                st.markdown("<div class='result-card result-good'><h4>✔ Document appears Clean</h4><b>Risk Score:</b> {}%</div>".format(round(risk_score,2)), unsafe_allow_html=True)
+                st.write("No immediate tampering signs based on simple heuristics.")
+            st.write("**Metadata:**")
+            st.json(metadata)
+
+            # Download buttons
+            csv_bytes = create_csv_bytes(report)
+            json_bytes = create_json_bytes(report)
+            pdf_bytes, pdf_type = create_pdf_bytes(report, None)
+            st.download_button("⬇️ Download CSV Report", data=csv_bytes, file_name=f"{uploaded_file.name}_report.csv", mime="text/csv")
+            st.download_button("⬇️ Download JSON Report", data=json_bytes, file_name=f"{uploaded_file.name}_report.json", mime="application/json")
+            if pdf_type == "pdf":
+                st.download_button("⬇️ Download PDF Report", data=pdf_bytes, file_name=f"{uploaded_file.name}_report.pdf", mime="application/pdf")
+            else:
+                st.download_button("⬇️ Download TXT Report", data=pdf_bytes, file_name=f"{uploaded_file.name}_report.txt", mime="text/plain")
+
+        with colB:
+            st.write("### Visuals")
+            if pil_img is not None:
+                st.image(pil_img, caption="Uploaded Document Preview", use_column_width=True)
+            if ela_pil is not None:
+                st.write("**Error Level Analysis (ELA)**")
+                st.image(ela_pil, caption="ELA Visualization (high values = suspicious)", use_column_width=True)
+                # heatmap
+                try:
+                    ela_np = np.array(ela_pil.convert("L"))
+                    heatbuf = simple_heatmap_from_ela(ela_np)
+                    st.image(heatbuf, caption="ELA Heatmap", use_column_width=True)
+                except Exception:
+                    pass
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.info("Note: This is a prototype. For production use, train models on diverse tampering samples and add more forensic checks (font-matching, metadata deep analysis, PRNU, clone-detection, etc.).")
+
+# -----------------------------
+# Footer
+# -----------------------------
+st.markdown("<br/><div style='text-align:center;color:#007F7B'>Made for Standard Chartered Bank | AI Forensic Prototype</div>", unsafe_allow_html=True)
