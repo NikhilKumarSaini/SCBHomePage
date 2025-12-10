@@ -1,37 +1,45 @@
 import streamlit as st
-import base64
 
+# ----------------------- SCB THEME CSS -----------------------
 st.markdown("""
 <style>
 .upload-box {
     border: 2px dashed #0033A0;
-    border-radius: 10px;
-    padding: 28px;
+    border-radius: 12px;
+    padding: 30px;
     text-align: center;
-    color: #0033A0;
-    font-size: 17px;
-    font-weight: 500;
     background-color: #F5F7FA;
+    color: #0033A0;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 10px;
 }
 .file-name {
-    margin-top: 12px;
+    margin-top: 14px;
     color: #007F7B;
+    font-size: 16px;
     font-weight: 600;
-    font-size: 15px;
 }
 </style>
 """, unsafe_allow_html=True)
 
 
+# ----------------------- FILE UPLOADER -----------------------
 uploaded_file = st.file_uploader(
     "Upload Bank Statement (PDF / PNG / JPG)",
     type=["pdf", "png", "jpg", "jpeg"],
     label_visibility="collapsed"
 )
 
-# Upload UI box
-st.markdown("<div class='upload-box'>Drag & Drop Bank Statement Here<br><br>or Click to Browse</div>", unsafe_allow_html=True)
+# ----------------------- CUSTOM BOX UI -----------------------
+st.markdown(
+    "<div class='upload-box'>📄 Drag & Drop Bank Statement Here<br><br>or Click to Browse</div>",
+    unsafe_allow_html=True
+)
 
-# Show filename inside upload box
+# ----------------------- SHOW FILE NAME INSIDE BOX -----------------------
 if uploaded_file is not None:
-    st.markdown(f"<div class='file-name'>📄 {uploaded_file.name}</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='file-name'>✔ Uploaded: {uploaded_file.name}</div>",
+        unsafe_allow_html=True
+    )
