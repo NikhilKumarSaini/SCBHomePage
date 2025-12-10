@@ -1,4 +1,6 @@
-# Import required libraries
+# ===========================
+# IMPORT LIBRARIES
+# ===========================
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,71 +14,99 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 import warnings
 warnings.filterwarnings("ignore")
 
-# Load dataset
+# ===========================
+# LOAD DATA
+# ===========================
 df = pd.read_csv("Loan dataset_classification.csv")
 
-# Drop Loan_ID column
+# ===========================
+# DROP USELESS COLUMN
+# ===========================
 df.drop("Loan_ID", axis=1, inplace=True)
 
-# Handle missing values (Categorical)
-cat_cols = ["Gender","Married","Dependents","Education","Self_Employed","Property_Area"]
+# ===========================
+# HANDLE MISSING VALUES
+# ===========================
+cat_cols = ["Gender","Married","Dependents","Education","Self_Employed","Property_Area","Loan_Status"]
+num_cols = ["ApplicantIncome","CoapplicantIncome","LoanAmount","Loan_Amount_Term","Credit_History"]
+
 for col in cat_cols:
     df[col].fillna(df[col].mode()[0], inplace=True)
 
-# Handle missing values (Numerical)
-num_cols = ["LoanAmount","Loan_Amount_Term","Credit_History","CoapplicantIncome"]
 for col in num_cols:
     df[col].fillna(df[col].median(), inplace=True)
 
-# Convert Dependents
+# ===========================
+# CLEAN TARGET COLUMN
+# ===========================
+df["Loan_Status"] = df["Loan_Status"].str.strip()
+df["Loan_Status"] = df["Loan_Status"].map({"Y":1, "N":0})
+df.dropna(subset=["Loan_Status"], inplace=True)
+df.reset_index(drop=True, inplace=True)
+
+# ===========================
+# DATA TYPE FIX
+# ===========================
 df["Dependents"] = df["Dependents"].replace("3+", 3).astype(int)
 
-# Encode categorical columns
-df["Gender"] = df["Gender"].map({"Male":1 , "Female":0})
-df["Married"] = df["Married"].map({"Yes":1 , "No":0})
-df["Education"] = df["Education"].map({"Graduate":1 , "Not Graduate":0})
-df["Self_Employed"] = df["Self_Employed"].map({"Yes":1 , "No":0})
-df["Loan_Status"] = df["Loan_Status"].map({"Y":1 , "N":0})
+# ===========================
+# ENCODING
+# ===========================
+df["Gender"] = df["Gender"].map({"Male":1, "Female":0})
+df["Married"] = df["Married"].map({"Yes":1, "No":0})
+df["Education"] = df["Education"].map({"Graduate":1, "Not Graduate":0})
+df["Self_Employed"] = df["Self_Employed"].map({"Yes":1, "No":0})
 
-# One-hot encoding for Property_Area
 df = pd.get_dummies(df, columns=["Property_Area"], drop_first=True)
 
-# Feature & Target split
+# ===========================
+# FINAL CHECK
+# ===========================
+print("NULL VALUES CHECK:\n", df.isnull().sum())
+
+# ===========================
+# FEATURE & TARGET
+# ===========================
 X = df.drop("Loan_Status", axis=1)
 y = df["Loan_Status"]
 
-# Train-Test split
+# ===========================
+# TRAIN TEST SPLIT
+# ===========================
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
 
-# Logistic Regression Model
+# ===========================
+# LOGISTIC REGRESSION MODEL
+# ===========================
 lr = LogisticRegression(max_iter=1000)
 lr.fit(X_train, y_train)
 
-# Predictions
 y_pred_lr = lr.predict(X_test)
 
-# Evaluation for Logistic Regression
-print("LOGISTIC REGRESSION RESULTS")
-print("===========================")
+# ===========================
+# RANDOM FOREST MODEL
+# ===========================
+rf = RandomForestClassifier(n_estimators=100)
+rf.fit(X_train, y_train)
+
+y_pred_rf = rf.predict(X_test)
+
+# ===========================
+# RESULTS
+# ===========================
+print("\nLOGISTIC REGRESSION")
 print("Accuracy:", accuracy_score(y_test, y_pred_lr))
 print(confusion_matrix(y_test, y_pred_lr))
 print(classification_report(y_test, y_pred_lr))
 
-# Random Forest Model
-rf = RandomForestClassifier(n_estimators=100)
-rf.fit(X_train, y_train)
-
-# Predictions
-y_pred_rf = rf.predict(X_test)
-
-# Evaluation for Random Forest
-print("\nRANDOM FOREST RESULTS")
-print("=====================")
+print("\nRANDOM FOREST")
 print("Accuracy:", accuracy_score(y_test, y_pred_rf))
 print(confusion_matrix(y_test, y_pred_rf))
 print(classification_report(y_test, y_pred_rf))
 
-# Confusion Matrix Plot (Logistic Regression)
+# ===========================
+# CONFUSION MATRIX PLOT
+# ===========================
 sns.heatmap(confusion_matrix(y_test, y_pred_lr), annot=True)
 plt.title("Confusion Matrix - Logistic Regression")
 plt.xlabel("Predicted")
