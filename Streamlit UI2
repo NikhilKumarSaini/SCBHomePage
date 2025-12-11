@@ -1,0 +1,99 @@
+import streamlit as st
+import os
+import time
+from pathlib import Path
+from dotenv import load_dotenv
+
+# DB function import
+from db_utils import save_upload_metadata
+
+# Load environment variables
+load_dotenv()
+
+# Directories
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads"))
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# ---------------------------------------------------------
+# YOUR EXISTING UI CODE STARTS (unchanged UI)
+# ---------------------------------------------------------
+
+st.set_page_config(page_title="Bank Statement Forensics", layout="centered")
+
+st.markdown("""
+<style>
+.upload-box {
+    border: 2px dashed #0033A0;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    background-color: #F5F7FA;
+    color: #0033A0;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 10px;
+}
+.file-name {
+    margin-top: 14px;
+    color: #007F7B;
+    font-size: 16px;
+    font-weight: 600;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+st.title("AI-Powered Bank Statement Forensic Analyzer")
+
+uploaded_file = st.file_uploader(
+    "Upload Bank Statement (PDF / PNG / JPG)",
+    type=["pdf", "png", "jpg", "jpeg"],
+    label_visibility="collapsed"
+)
+
+# Custom UI Upload Box
+st.markdown(
+    "<div class='upload-box'>📄 Drag & Drop Bank Statement Here<br><br>or Click to Browse</div>",
+    unsafe_allow_html=True
+)
+
+# Show filename inside the box
+if uploaded_file is not None:
+    st.markdown(f"<div class='file-name'>✔ Uploaded: {uploaded_file.name}</div>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------
+# BACKEND: SAVE FILE + SAVE METADATA TO DB
+# ---------------------------------------------------------
+
+if st.button("Save to Database") and uploaded_file:
+
+    # ------------------ 1) Save file locally ------------------
+    timestamp = int(time.time())
+    safe_filename = f"{timestamp}_{uploaded_file.name.replace(' ', '_')}"
+    save_path = UPLOAD_DIR / safe_filename
+
+    with open(save_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+
+    st.success(f"File saved locally: {save_path}")
+
+    # ------------------ 2) Insert DB record ------------------
+    try:
+        record_id = save_upload_metadata(
+            filename=uploaded_file.name,
+            filepath=str(save_path.resolve()),
+            content_type=uploaded_file.type,
+            size_bytes=len(uploaded_file.getvalue()),
+            uploaded_by="nikhil"   # later you can make dynamic user
+        )
+
+        st.success(f"DB Entry Created Successfully! Record ID: {record_id}")
+
+    except Exception as e:
+        st.error(f"Database Error: {e}")
+
+
+# ---------------------------------------------------------
+# END OF FILE
+# ---------------------------------------------------------
