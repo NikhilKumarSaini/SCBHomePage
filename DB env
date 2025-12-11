@@ -1,8 +1,0 @@
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=forensics_db
-DB_USER=forensics_user
-DB_PASS=YourStrongPasswordHere
-
-UPLOAD_DIR=uploads
-REPORT_DIR=reports
