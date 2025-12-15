@@ -57,6 +57,45 @@ def fetch_upload(record_id):
 
 
 
+def save_pdf_metadata(upload_id: int, metadata: dict):
+    """
+    Save extracted PDF metadata linked to a doc_uploads record
+    """
+    conn = get_conn()
+    try:
+        cur = conn.cursor()
+        sql = """
+        INSERT INTO pdf_metadata (
+            upload_id,
+            author,
+            creator,
+            producer,
+            creation_date,
+            modified_date,
+            num_pages,
+            is_encrypted
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        cur.execute(sql, (
+            upload_id,
+            metadata.get("author"),
+            metadata.get("creator"),
+            metadata.get("producer"),
+            metadata.get("creation_date"),
+            metadata.get("modified_date"),
+            metadata.get("num_pages"),
+            metadata.get("is_encrypted")
+        ))
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+
+
+
+
 
 
 
