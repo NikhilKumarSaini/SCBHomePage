@@ -1,0 +1,130 @@
+import streamlit as st
+import os
+import time
+from pathlib import Path
+from dotenv import load_dotenv
+
+from db_utils import save_upload_metadata, get_conn
+
+# -------------------------------------------------
+# ENV & PATH SETUP
+# -------------------------------------------------
+load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = BASE_DIR / os.getenv("UPLOAD_DIR", "uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# -------------------------------------------------
+# PAGE CONFIG
+# -------------------------------------------------
+st.set_page_config(page_title="Bank Statement Forensics", layout="centered")
+
+# -------------------------------------------------
+# UI STYLES (EXACT SAME FEEL)
+# -------------------------------------------------
+st.markdown("""
+<style>
+.upload-box {
+    border: 2px dashed #0033A0;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    background-color: #F5F7FA;
+    color: #0033A0;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 10px;
+}
+.file-name {
+    margin-top: 14px;
+    color: #007F7B;
+    font-size: 16px;
+    font-weight: 600;
+}
+.footer {
+    margin-top: 60px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 13px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# -------------------------------------------------
+# HEADER
+# -------------------------------------------------
+st.title("AI-Powered Bank Statement Forensic System")
+st.write("Upload bank statements securely for analysis and verification.")
+
+# -------------------------------------------------
+# FILE UPLOADER (UI SAME)
+# -------------------------------------------------
+uploaded_file = st.file_uploader(
+    "Upload Bank Statement (PDF / PNG / JPG)",
+    type=["pdf", "png", "jpg", "jpeg"],
+    label_visibility="collapsed"
+)
+
+st.markdown(
+    "<div class='upload-box'>📄 Drag & Drop Bank Statement Here<br><br>or Click to Browse</div>",
+    unsafe_allow_html=True
+)
+
+if uploaded_file:
+    st.markdown(
+        f"<div class='file-name'>✔ Uploaded: {uploaded_file.name}</div>",
+        unsafe_allow_html=True
+    )
+
+# -------------------------------------------------
+# ANALYZE BUTTON (UI ONLY – NO ML)
+# -------------------------------------------------
+if st.button("Analyze Document") and uploaded_file:
+
+    # Fake progress UI (for demo / UI continuity)
+    progress = st.progress(0)
+    status = st.empty()
+
+    steps = [
+        "Uploading document...",
+        "Validating file format...",
+        "Preparing document...",
+        "Saving securely...",
+        "Finalizing..."
+    ]
+
+    for i, step in enumerate(steps):
+        status.info(step)
+        time.sleep(0.4)
+        progress.progress(int((i + 1) / len(steps) * 100))
+
+    # -------------------------------------------------
+    # BACKEND (CLEAN): SAVE FILE + SAVE METADATA
+    # -------------------------------------------------
+    timestamp = int(time.time())
+    safe_name = f"{timestamp}_{uploaded_file.name.replace(' ', '_')}"
+    file_path = UPLOAD_DIR / safe_name
+
+    with open(file_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+
+    record_id = save_upload_metadata(
+        filename=uploaded_file.name,
+        filepath=str(file_path),
+        content_type=uploaded_file.type,
+        size_bytes=len(uploaded_file.getvalue()),
+        uploaded_by="user"
+    )
+
+    status.success("Document uploaded and saved successfully.")
+    st.success(f"Upload complete (Record ID: {record_id})")
+
+# -------------------------------------------------
+# FOOTER (SAME FEEL)
+# -------------------------------------------------
+st.markdown("""
+<div class="footer">
+    © 2025 Bank Statement Forensics Platform · Internal Prototype
+</div>
+""", unsafe_allow_html=True)
