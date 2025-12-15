@@ -1,0 +1,131 @@
+import streamlit as st
+import os
+import time
+from pathlib import Path
+from dotenv import load_dotenv
+
+from db_utils import save_upload_metadata, get_conn
+
+# -------------------------------------------------
+# Load environment variables
+# -------------------------------------------------
+load_dotenv()
+
+# -------------------------------------------------
+# Resolve project base directory safely
+# -------------------------------------------------
+BASE_DIR = Path(__file__).resolve().parent
+
+UPLOAD_DIR = BASE_DIR / os.getenv("UPLOAD_DIR", "uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# -------------------------------------------------
+# PAGE CONFIG
+# -------------------------------------------------
+st.set_page_config(page_title="Bank Statement Upload", layout="centered")
+
+# -------------------------------------------------
+# UI STYLES (UNCHANGED)
+# -------------------------------------------------
+st.markdown("""
+<style>
+.upload-box {
+    border: 2px dashed #0033A0;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    background-color: #F5F7FA;
+    color: #0033A0;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 10px;
+}
+.file-name {
+    margin-top: 14px;
+    color: #007F7B;
+    font-size: 16px;
+    font-weight: 600;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# -------------------------------------------------
+# HEADER
+# -------------------------------------------------
+st.title("Bank Statement Upload System")
+st.write("Upload PDF/Image files. Files are stored locally and metadata is saved in PostgreSQL.")
+
+# -------------------------------------------------
+# FILE UPLOADER
+# -------------------------------------------------
+uploaded_file = st.file_uploader(
+    "Upload Bank Statement (PDF / PNG / JPG)",
+    type=["pdf", "png", "jpg", "jpeg"],
+    label_visibility="collapsed"
+)
+
+st.markdown(
+    "<div class='upload-box'>📄 Drag & Drop Bank Statement Here<br><br>or Click to Browse</div>",
+    unsafe_allow_html=True
+)
+
+if uploaded_file:
+    st.markdown(
+        f"<div class='file-name'>✔ Selected: {uploaded_file.name}</div>",
+        unsafe_allow_html=True
+    )
+
+# -------------------------------------------------
+# SAVE FILE + SAVE METADATA
+# -------------------------------------------------
+if st.button("Save File") and uploaded_file:
+
+    # 1. Save file to uploads folder (no overwrite)
+    timestamp = int(time.time())
+    safe_name = f"{timestamp}_{uploaded_file.name.replace(' ', '_')}"
+    file_path = UPLOAD_DIR / safe_name
+
+    with open(file_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+
+    # 2. Save metadata to DB
+    record_id = save_upload_metadata(
+        filename=uploaded_file.name,
+        filepath=str(file_path),
+        content_type=uploaded_file.type,
+        size_bytes=len(uploaded_file.getvalue()),
+        uploaded_by="user"  # can be dynamic later
+    )
+
+    st.success(f"File saved successfully (Record ID: {record_id})")
+
+# -------------------------------------------------
+# FETCH UPLOADED FILES (VIEW DATA)
+# -------------------------------------------------
+st.divider()
+st.subheader("Uploaded Files History")
+
+def fetch_all_uploads():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, filename, filepath, created_at
+        FROM doc_uploads
+        ORDER BY created_at DESC
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows
+
+rows = fetch_all_uploads()
+
+if rows:
+    for r in rows:
+        st.write(
+            f"🗂️ **{r[1]}**  \n"
+            f"📍 `{r[2]}`  \n"
+            f"🕒 {r[3]}"
+        )
+else:
+    st.info("No files uploaded yet.")
