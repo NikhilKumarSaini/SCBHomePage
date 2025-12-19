@@ -77,6 +77,8 @@ if st.button("Analyze Document"):
 
 # ================= RESULTS CARD =================
 
+# ================= RESULTS CARD =================
+
 result = st.session_state.get("scoring_result")
 
 if result:
@@ -85,55 +87,62 @@ if result:
     risk = float(result.get("risk_score", 0))
     verdict = result.get("verdict", "Unknown")
     ela = round(float(result.get("ela_score", 0)), 2)
-    confidence = float(result.get("confidence", 0.0))
     report_path = result.get("report_path")
 
-    risk_color = "#E5533D" if risk > 60 else "#F4B400" if risk > 30 else "#1DB954"
-    verdict_color = "#1DB954" if verdict.lower() == "clean" else "#E5533D"
+    # ---- METRICS ----
+    col1, col2, col3 = st.columns(3)
 
-    html_block = f"""
-    <div style="display:flex; gap:24px; margin-top:25px;">
+    col1.metric(
+        label="Risk Score (%)",
+        value=f"{risk}%",
+        delta=None
+    )
 
-        <div style="flex:1; background:#F5F9FF; padding:22px; border-radius:14px;
-                    border-left:6px solid {risk_color}; box-shadow:0 4px 10px rgba(0,0,0,0.06)">
-            <h4>Risk Score</h4>
-            <h1 style="color:{risk_color}; margin:0;">{risk}%</h1>
-        </div>
+    col2.metric(
+        label="Verdict",
+        value=verdict
+    )
 
-        <div style="flex:1; background:#F5FFF8; padding:22px; border-radius:14px;
-                    border-left:6px solid {verdict_color}; box-shadow:0 4px 10px rgba(0,0,0,0.06)">
-            <h4>Verdict</h4>
-            <h1 style="color:{verdict_color}; margin:0;">{verdict}</h1>
-        </div>
+    col3.metric(
+        label="ELA Signal",
+        value=ela
+    )
 
-        <div style="flex:1; background:#FFF9F3; padding:22px; border-radius:14px;
-                    border-left:6px solid #0033A0; box-shadow:0 4px 10px rgba(0,0,0,0.06)">
-            <h4>ELA Signal</h4>
-            <h1 style="color:#0033A0; margin:0;">{ela}</h1>
-        </div>
+    st.markdown("---")
 
-    </div>
-    """
+    # ================= RISK DISTRIBUTION GRAPH =================
+    st.subheader("Risk Assessment Distribution")
 
-    st.markdown(html_block, unsafe_allow_html=True)
+    import pandas as pd
+    import matplotlib.pyplot as plt
 
-    # -------- Confidence --------
-    st.markdown("### Analysis Confidence")
-    st.progress(int(confidence * 100))
-    st.caption(f"Confidence level: {int(confidence * 100)}%")
+    risk_data = pd.DataFrame({
+        "Metric": ["Risk Score", "ELA Signal", "Remaining Margin"],
+        "Value": [risk, ela * 10, max(0, 100 - risk)]
+    })
 
-    # -------- Download --------
+    fig, ax = plt.subplots()
+    bars = ax.bar(
+        risk_data["Metric"],
+        risk_data["Value"]
+    )
+
+    ax.set_ylim(0, 100)
+    ax.set_ylabel("Score")
+    ax.set_title("Forensic Signal Breakdown")
+
+    st.pyplot(fig)
+
+    # ================= DOWNLOAD =================
     if report_path and Path(report_path).exists():
         with open(report_path, "rb") as f:
             st.download_button(
-                "⬇️ Download Forensic Report (JSON)",
-                f,
+                label="⬇️ Download Forensic Report (JSON)",
+                data=f,
                 file_name=Path(report_path).name,
                 mime="application/json"
             )
 
 # ================= FOOTER =================
-st.markdown(
-    "<hr><center>© 2025 Standard Chartered · Internal Prototype</center>",
-    unsafe_allow_html=True
-)
+st.markdown("---")
+st.caption("© 2025 Standard Chartered · Internal Prototype")
