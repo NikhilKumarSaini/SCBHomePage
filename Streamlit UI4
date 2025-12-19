@@ -166,6 +166,16 @@ if st.button("Analyze Document") and uploaded_file:
 
     st.success(f"Document uploaded successfully (Record ID: {record_id})")
 
+
+
+st.subheader("Forensic Risk Assessment")
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("Risk Score", f"{result['risk_score']} %")
+col2.metric("Verdict", result["verdict"])
+col3.metric("ELA Signal", round(result["ela_score"], 2))
+
 # -------------------------------------------------
 # FOOTER
 # -------------------------------------------------
