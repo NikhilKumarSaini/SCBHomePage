@@ -77,82 +77,109 @@ if st.button("Analyze Document"):
 
 # ================= RESULTS CARD =================
 
-# ================= RESULTS CARD =================
+# ================= RESULTS DASHBOARD =================
 
 result = st.session_state.get("scoring_result")
 
 if result:
-    st.subheader("Forensic Risk Assessment")
-
     risk = float(result.get("risk_score", 0))
     verdict = result.get("verdict", "Unknown")
     ela = round(float(result.get("ela_score", 0)), 2)
-    report_path = result.get("report_path")
+    record_id = result.get("record_id")
 
-    # ---- METRICS ----
+    # -------- COLOR LOGIC --------
+    if risk < 30:
+        risk_color = "🟢 LOW RISK"
+    elif risk < 60:
+        risk_color = "🟠 MEDIUM RISK"
+    else:
+        risk_color = "🔴 HIGH RISK"
+
+    st.subheader("Forensic Risk Assessment")
+
+    # -------- FLASH CARDS --------
     col1, col2, col3 = st.columns(3)
 
     col1.metric(
-        label="Risk Score (%)",
-        value=f"{risk}%",
-        delta=None
+        "Risk Score",
+        f"{risk}%",
+        help="Overall forensic manipulation probability"
     )
 
     col2.metric(
-        label="Verdict",
-        value=verdict
+        "Verdict",
+        verdict,
+        help="Final decision based on combined forensic signals"
     )
 
     col3.metric(
-        label="ELA Signal",
-        value=ela
+        "Risk Level",
+        risk_color,
+        help="Categorized risk band"
     )
 
     st.markdown("---")
 
-    # ================= RISK DISTRIBUTION GRAPH =================
-    st.subheader("Risk Assessment Distribution")
+    # -------- LAYOUT: GRAPH + DETAILS --------
+    left, right = st.columns([1, 2])
 
-    import pandas as pd
-    import matplotlib.pyplot as plt
+    with left:
+        st.markdown("### Signal Snapshot")
 
-    risk_data = pd.DataFrame({
-        "Metric": ["Risk Score", "ELA Signal", "Remaining Margin"],
-        "Value": [risk, ela * 10, max(0, 100 - risk)]
-    })
+        import pandas as pd
+        import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots(figsize=(4,3))
-    bars = ax.bar(
-        risk_data["Metric"],
-        risk_data["Value"]
-    )
+        df = pd.DataFrame({
+            "Metric": ["Risk", "ELA"],
+            "Score": [risk, ela * 10]
+        })
 
-    ax.set_ylim(0, 100)
-    ax.set_ylabel("Score")
-    ax.set_title("Forensic Signal Breakdown")
+        fig, ax = plt.subplots(figsize=(3, 2))
+        bars = ax.bar(
+            df["Metric"],
+            df["Score"],
+            color=["#d32f2f" if risk > 60 else "#f9a825" if risk > 30 else "#2e7d32",
+                   "#1976d2"]
+        )
 
-    st.pyplot(fig)
+        ax.set_ylim(0, 100)
+        ax.set_title("Forensic Signals", fontsize=10)
+        ax.tick_params(labelsize=8)
 
-    # ================= DOWNLOAD =================
-   # ================= DOWNLOAD =================
-report_path = result.get("report_path")
+        st.pyplot(fig)
 
-if report_path:
-    report_file = Path(report_path)
+    with right:
+        st.markdown("### Assessment Summary")
+        st.write(
+            f"""
+            • **Risk Score:** {risk}%  
+            • **ELA Signal Strength:** {ela}  
+            • **Final Verdict:** {verdict}  
+
+            This assessment is generated using multiple
+            forensic techniques including compression analysis,
+            error-level analysis (ELA), and noise inconsistencies.
+            """
+        )
+
+    st.markdown("---")
+
+    # -------- DOWNLOAD REPORT --------
+    from pathlib import Path
+
+    REPORTS_DIR = Path("reports")
+    report_file = REPORTS_DIR / f"{record_id}_final_report.json"
 
     if report_file.exists():
         with open(report_file, "rb") as f:
             st.download_button(
-                label="⬇️ Download Forensic Report (JSON)",
+                "⬇️ Download Forensic Report",
                 data=f,
                 file_name=report_file.name,
                 mime="application/json"
             )
     else:
-        st.warning("Forensic report not found on disk.")
-else:
-    st.warning("Report path not available yet.")   mime="application/json"
-            )
+        st.info("Forensic report will be available after full processing.")
 
 # ================= FOOTER =================
 st.markdown("---")
