@@ -121,7 +121,7 @@ if result:
         "Value": [risk, ela * 10, max(0, 100 - risk)]
     })
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(4,3))
     bars = ax.bar(
         risk_data["Metric"],
         risk_data["Value"]
@@ -134,13 +134,24 @@ if result:
     st.pyplot(fig)
 
     # ================= DOWNLOAD =================
-    if report_path and Path(report_path).exists():
-        with open(report_path, "rb") as f:
+   # ================= DOWNLOAD =================
+report_path = result.get("report_path")
+
+if report_path:
+    report_file = Path(report_path)
+
+    if report_file.exists():
+        with open(report_file, "rb") as f:
             st.download_button(
                 label="⬇️ Download Forensic Report (JSON)",
                 data=f,
-                file_name=Path(report_path).name,
+                file_name=report_file.name,
                 mime="application/json"
+            )
+    else:
+        st.warning("Forensic report not found on disk.")
+else:
+    st.warning("Report path not available yet.")   mime="application/json"
             )
 
 # ================= FOOTER =================
