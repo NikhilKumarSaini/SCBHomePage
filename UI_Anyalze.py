@@ -88,62 +88,52 @@ if result:
     confidence = float(result.get("confidence", 0.0))
     report_path = result.get("report_path")
 
-    # Color logic (SCB style)
     risk_color = "#E5533D" if risk > 60 else "#F4B400" if risk > 30 else "#1DB954"
     verdict_color = "#1DB954" if verdict.lower() == "clean" else "#E5533D"
 
-    st.markdown(
-        f"""
-        <div style="display:flex; gap:24px; margin-top:25px;">
+    html_block = f"""
+    <div style="display:flex; gap:24px; margin-top:25px;">
 
-            <div style="flex:1; background:#F5F9FF; padding:22px; border-radius:14px;
-                        border-left:6px solid {risk_color}; box-shadow:0 4px 10px rgba(0,0,0,0.06)">
-                <h4 style="margin-bottom:6px;">Risk Score</h4>
-                <h1 style="color:{risk_color}; margin:0;">{risk}%</h1>
-            </div>
-
-            <div style="flex:1; background:#F5FFF8; padding:22px; border-radius:14px;
-                        border-left:6px solid {verdict_color}; box-shadow:0 4px 10px rgba(0,0,0,0.06)">
-                <h4 style="margin-bottom:6px;">Verdict</h4>
-                <h1 style="color:{verdict_color}; margin:0;">{verdict}</h1>
-            </div>
-
-            <div style="flex:1; background:#FFF9F3; padding:22px; border-radius:14px;
-                        border-left:6px solid #0033A0; box-shadow:0 4px 10px rgba(0,0,0,0.06)">
-                <h4 style="margin-bottom:6px;">ELA Signal</h4>
-                <h1 style="color:#0033A0; margin:0;">{ela}</h1>
-            </div>
-
+        <div style="flex:1; background:#F5F9FF; padding:22px; border-radius:14px;
+                    border-left:6px solid {risk_color}; box-shadow:0 4px 10px rgba(0,0,0,0.06)">
+            <h4>Risk Score</h4>
+            <h1 style="color:{risk_color}; margin:0;">{risk}%</h1>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
 
-    # ================= CONFIDENCE BAR =================
+        <div style="flex:1; background:#F5FFF8; padding:22px; border-radius:14px;
+                    border-left:6px solid {verdict_color}; box-shadow:0 4px 10px rgba(0,0,0,0.06)">
+            <h4>Verdict</h4>
+            <h1 style="color:{verdict_color}; margin:0;">{verdict}</h1>
+        </div>
 
+        <div style="flex:1; background:#FFF9F3; padding:22px; border-radius:14px;
+                    border-left:6px solid #0033A0; box-shadow:0 4px 10px rgba(0,0,0,0.06)">
+            <h4>ELA Signal</h4>
+            <h1 style="color:#0033A0; margin:0;">{ela}</h1>
+        </div>
+
+    </div>
+    """
+
+    st.markdown(html_block, unsafe_allow_html=True)
+
+    # -------- Confidence --------
     st.markdown("### Analysis Confidence")
     st.progress(int(confidence * 100))
     st.caption(f"Confidence level: {int(confidence * 100)}%")
 
-    # ================= DOWNLOAD REPORT =================
-
+    # -------- Download --------
     if report_path and Path(report_path).exists():
         with open(report_path, "rb") as f:
             st.download_button(
-                label="⬇️ Download Forensic Report (JSON)",
-                data=f,
+                "⬇️ Download Forensic Report (JSON)",
+                f,
                 file_name=Path(report_path).name,
                 mime="application/json"
             )
 
 # ================= FOOTER =================
-
 st.markdown(
-    """
-    <hr style="margin-top:40px;"/>
-    <div style="text-align:center; color:#6b6b6b; font-size:14px;">
-        © 2025 Standard Chartered · Internal Prototype
-    </div>
-    """,
+    "<hr><center>© 2025 Standard Chartered · Internal Prototype</center>",
     unsafe_allow_html=True
 )
