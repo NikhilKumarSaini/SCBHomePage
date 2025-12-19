@@ -23,10 +23,19 @@ def run_scoring(upload_id: int) -> dict:
 
     # 2️⃣ Locate forensic output folder
     forensic_dir = None
-    for d in os.listdir("Forensics_Output"):
-        if filename.replace(" ", "_") in d:
-            forensic_dir = os.path.join("Forensics_Output", d)
-            break
+    base_dir = "Forensics_Output"
+
+folders = [
+    os.path.join(base_dir, d)
+    for d in os.listdir(base_dir)
+    if os.path.isdir(os.path.join(base_dir, d))
+]
+
+if not folders:
+    raise FileNotFoundError("No forensic output folders found")
+
+# pick latest folder (most recent analysis)
+forensic_dir = max(folders, key=os.path.getmtime)
 
     if not forensic_dir:
         raise FileNotFoundError("Forensic output not found")
