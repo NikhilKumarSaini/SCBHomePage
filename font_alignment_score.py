@@ -1,29 +1,31 @@
-import os
+import cv2
 import numpy as np
-from PIL import Image
+import os
 
-def compute_font_alignment_score(alignment_image_path: str) -> float:
-    """
-    Converts font alignment visual inconsistencies into risk score (0–1)
-    """
+def compute_font_alignment_score(font_dir):
+    if not os.path.exists(font_dir):
+        return 0
 
-    if not os.path.exists(alignment_image_path):
-        return 0.0  # no anomaly detected
+    heat_vals = []
 
-    img = Image.open(alignment_image_path).convert("L")
-    arr = np.array(img)
+    for img in os.listdir(font_dir):
+        if not img.lower().endswith(".jpg"):
+            continue
 
-    # Measure vertical variance (misalignment)
-    vertical_variance = np.var(arr.mean(axis=1))
+        path = os.path.join(font_dir, img)
+        im = cv2.imread(path)
 
-    # Normalize (empirical thresholds)
-    if vertical_variance < 20:
-        score = 0.1
-    elif vertical_variance < 50:
-        score = 0.3
-    elif vertical_variance < 100:
-        score = 0.6
-    else:
-        score = 0.9
+        if im is None:
+            continue
 
-    return round(score, 4)
+        gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+        heat_vals.append(np.std(gray))
+
+    if not heat_vals:
+        return 0
+
+    avg_dev = np.mean(heat_vals)
+
+    font_score = min(100, avg_dev * 2)
+
+    return round(float(font_score), 2)
