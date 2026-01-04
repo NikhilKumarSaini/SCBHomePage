@@ -6,17 +6,16 @@ def compute_final_score(
     font_score: float
 ) -> dict:
     """
-    Combines all forensic scores into a final risk score.
-    All inputs are expected in range 0–1.
+    Combines individual forensic scores into final risk score
     """
 
-    # ---- weights (explainable & bank-friendly) ----
+    # ---- weights (manager-friendly) ----
     weights = {
-        "ela": 0.30,
+        "ela": 0.25,
         "noise": 0.20,
         "compression": 0.20,
         "metadata": 0.15,
-        "font": 0.15
+        "font": 0.20
     }
 
     final_score = (
@@ -27,25 +26,9 @@ def compute_final_score(
         font_score * weights["font"]
     )
 
-    # convert to percentage
-    risk_percentage = round(final_score * 100, 2)
-
-    # ---- verdict logic ----
-    if risk_percentage >= 65:
-        verdict = "High Risk"
-    elif risk_percentage >= 35:
-        verdict = "Suspicious"
-    else:
-        verdict = "Clean"
+    final_score = round(final_score, 3)
 
     return {
-        "risk_score": risk_percentage,
-        "verdict": verdict,
-        "signals": {
-            "ela": round(ela_score, 3),
-            "noise": round(noise_score, 3),
-            "compression": round(compression_score, 3),
-            "metadata": round(metadata_score, 3),
-            "font_alignment": round(font_score, 3)
-        }
+        "final_risk_score": final_score,
+        "risk_percentage": round(final_score * 100, 2)
     }
