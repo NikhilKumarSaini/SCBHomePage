@@ -1,34 +1,41 @@
 def compute_final_score(
-    ela_score: float,
-    noise_score: float,
-    compression_score: float,
-    metadata_score: float,
-    font_score: float
+    ela_score: int,
+    noise_score: int,
+    compression_score: int,
+    font_score: int,
+    metadata_score: int
 ) -> dict:
     """
-    Combines individual forensic scores into final risk score
+    All inputs expected in range 0–100
+    Returns final risk score + verdict
     """
 
-    # ---- weights (manager-friendly) ----
     weights = {
         "ela": 0.25,
-        "noise": 0.20,
+        "noise": 0.15,
         "compression": 0.20,
-        "metadata": 0.15,
-        "font": 0.20
+        "font": 0.25,
+        "metadata": 0.15
     }
 
     final_score = (
-        ela_score * weights["ela"] +
-        noise_score * weights["noise"] +
-        compression_score * weights["compression"] +
-        metadata_score * weights["metadata"] +
-        font_score * weights["font"]
+        ela_score * weights["ela"]
+        + noise_score * weights["noise"]
+        + compression_score * weights["compression"]
+        + font_score * weights["font"]
+        + metadata_score * weights["metadata"]
     )
 
-    final_score = round(final_score, 3)
+    final_score = round(final_score, 2)
+
+    if final_score >= 70:
+        verdict = "HIGH RISK (Likely Manipulated)"
+    elif final_score >= 40:
+        verdict = "MEDIUM RISK (Suspicious)"
+    else:
+        verdict = "LOW RISK (Likely Genuine)"
 
     return {
-        "final_risk_score": final_score,
-        "risk_percentage": round(final_score * 100, 2)
+        "final_score": final_score,
+        "verdict": verdict
     }
