@@ -1,43 +1,46 @@
 import joblib
-import numpy as np
-from pathlib import Path
+import os
+import pandas as pd
 
-MODEL_PATH = Path("ml/xgb_model.pkl")
+BASE_DIR = os.path.dirname(__file__)
+MODEL_PATH = os.path.join(BASE_DIR, "xgb_model.pkl")
 
-_model = None
+FEATURES = [
+    "ela_score",
+    "noise_score",
+    "compression_score",
+    "font_score",
+    "metadata_score",
+    "forensic_risk"
+]
 
-def load_model():
-    global _model
-    if _model is None:
-        _model = joblib.load(MODEL_PATH)
-    return _model
 
-
-def predict_risk(features: dict):
+def predict_risk(feature_dict: dict) -> dict:
     """
-    features = {
-        "ela_score": float,
-        "noise_score": float,
-        "compression_score": float,
-        "cnn_f1": float,
-        "cnn_f2": float
+    Returns:
+    {
+        probability: float,
+        verdict: LOW / MEDIUM / HIGH
     }
     """
 
-    model = load_model()
+    if not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError("Model not trained yet")
 
-    X = np.array([[
-        features["ela_score"],
-        features["noise_score"],
-        features["compression_score"],
-        features["cnn_f1"],
-        features["cnn_f2"]
-    ]])
+    model = joblib.load(MODEL_PATH)
 
-    prob = model.predict_proba(X)[0][1]   # manipulated probability
-    label = int(prob >= 0.5)
+    X = pd.DataFrame([[feature_dict[f] for f in FEATURES]], columns=FEATURES)
+
+    probability = float(model.predict_proba(X)[0][1])
+
+    if probability < 0.35:
+        verdict = "LOW"
+    elif probability < 0.65:
+        verdict = "MEDIUM"
+    else:
+        verdict = "HIGH"
 
     return {
-        "ml_probability": round(float(prob), 3),
-        "ml_label": label
+        "probability": round(probability, 3),
+        "verdict": verdict
     }
