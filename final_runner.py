@@ -1,7 +1,6 @@
 import os
 import json
 from datetime import datetime
-from pathlib import Path
 
 from scoring.ela_score import compute_ela_score
 from scoring.noise_score import compute_noise_score
@@ -13,54 +12,58 @@ from scoring.final_score import compute_final_score
 from ml.predict_xgb import predict_risk
 
 
-def run_scoring(record_id: int, pdf_path: str, metadata: dict = None) -> dict:
+def run_scoring(record_id: int, pdf_path: str) -> dict:
     """
-    End-to-end scoring pipeline
+    End-to-end forensic + ML scoring pipeline
     """
 
-    PROJECT_ROOT = Path(__file__).resolve().parents[1]
-    REPORTS_DIR = PROJECT_ROOT / "reports"
-    REPORTS_DIR.mkdir(exist_ok=True)
+    # --------------------------------------------------
+    # PATH SETUP
+    # --------------------------------------------------
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    # -------------------------------------------------
-    # IMAGE PATH (SourceCode already created this)
-    # -------------------------------------------------
-    pdf_stem = Path(pdf_path).stem
-    image_dir = PROJECT_ROOT / "Images" / pdf_stem
+    FORENSICS_OUTPUT_ROOT = os.path.join(PROJECT_ROOT, "Forensics_Output")
+    REPORTS_DIR = os.path.join(PROJECT_ROOT, "reports")
 
-    image_files = sorted(image_dir.glob("*.jpg")) + sorted(image_dir.glob("*.png"))
+    os.makedirs(REPORTS_DIR, exist_ok=True)
 
-    if not image_files:
-        raise FileNotFoundError(f"No images found in {image_dir}")
+    # This folder is created by SourceCode/forensics.py
+    forensic_output_dir = os.path.join(
+        FORENSICS_OUTPUT_ROOT,
+        f"{record_id}_statement_manipulated"
+    )
 
-    image_path = str(image_files[0])  # use first page safely
+    if not os.path.exists(forensic_output_dir):
+        raise FileNotFoundError(
+            f"Forensics output directory not found: {forensic_output_dir}"
+        )
 
-    # -------------------------------------------------
-    # Individual forensic scores (IMAGE-BASED)
-    # -------------------------------------------------
-    ela_score = compute_ela_score(image_path)
-    noise_score = compute_noise_score(image_path)
-    compression_score = compute_compression_score(image_path)
-    font_score = compute_font_alignment_score(image_path)
-    metadata_score = compute_metadata_score(metadata or {})
+    # --------------------------------------------------
+    # INDIVIDUAL FORENSIC SCORES
+    # --------------------------------------------------
+    # ⚠️ ALL expect DIRECTORY, NOT single image
+    ela_score = compute_ela_score(forensic_output_dir)
+    noise_score = compute_noise_score(forensic_output_dir)
+    compression_score = compute_compression_score(forensic_output_dir)
+    font_score = compute_font_alignment_score(forensic_output_dir)
 
-    # -------------------------------------------------
-    # Aggregate forensic risk (numeric)
-    # -------------------------------------------------
-    final_out = compute_final_score({
-        "ela": ela_score,
-        "noise": noise_score,
-        "compression": compression_score,
-        "font": font_score,
-        "metadata": metadata_score
-    })
+    # PDF-level score
+    metadata_score = compute_metadata_score(pdf_path)
 
-    forensic_risk = final_out["final_score"]
-    verdict = final_out["verdict"]
+    # --------------------------------------------------
+    # AGGREGATED FORENSIC RISK
+    # --------------------------------------------------
+    forensic_risk = compute_final_score(
+        ela_score=ela_score,
+        noise_score=noise_score,
+        compression_score=compression_score,
+        font_score=font_score,
+        metadata_score=metadata_score
+    )
 
-    # -------------------------------------------------
-    # ML prediction (LOCKED)
-    # -------------------------------------------------
+    # --------------------------------------------------
+    # ML PREDICTION (XGBoost)
+    # --------------------------------------------------
     ml_result = predict_risk({
         "ela_score": ela_score,
         "noise_score": noise_score,
@@ -70,9 +73,9 @@ def run_scoring(record_id: int, pdf_path: str, metadata: dict = None) -> dict:
         "forensic_risk": forensic_risk
     })
 
-    # -------------------------------------------------
-    # Final report JSON
-    # -------------------------------------------------
+    # --------------------------------------------------
+    # FINAL REPORT JSON
+    # --------------------------------------------------
     report = {
         "record_id": record_id,
         "timestamp": datetime.utcnow().isoformat(),
@@ -83,17 +86,23 @@ def run_scoring(record_id: int, pdf_path: str, metadata: dict = None) -> dict:
             "compression_score": compression_score,
             "font_score": font_score,
             "metadata_score": metadata_score,
-            "forensic_risk": forensic_risk,
-            "verdict": verdict
+            "forensic_risk": forensic_risk
         },
 
         "ml_result": ml_result
     }
 
-    report_path = REPORTS_DIR / f"{record_id}_final_report.json"
+    report_path = os.path.join(
+        REPORTS_DIR,
+        f"{record_id}_final_report.json"
+    )
+
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=4)
 
-    report["report_path"] = str(report_path)
+    # UI needs this
+    report["report_path"] = report_path
+    report["final_risk_score"] = ml_result.get("risk_score", forensic_risk)
+    report["verdict"] = ml_result.get("verdict", "Unknown")
 
     return report
