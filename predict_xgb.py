@@ -1,12 +1,26 @@
 import joblib
-import pandas as pd
+import numpy as np
+from pathlib import Path
 
-_model = joblib.load("ml/xgb_model.pkl")
+# =========================
+# PATHS
+# =========================
+BASE_DIR = Path(__file__).parent
+MODEL_PATH = BASE_DIR / "xgb_model.pkl"
 
-def predict_ml_risk(feature_dict: dict) -> float:
+if not MODEL_PATH.exists():
+    raise FileNotFoundError("XGBoost model not found. Train first.")
+
+model = joblib.load(MODEL_PATH)
+
+# =========================
+# PREDICT FUNCTION
+# =========================
+def predict_manipulation(feature_vector):
     """
-    Returns ML-based manipulation probability (0–100)
+    feature_vector: list or np.array
+    returns probability (0–1)
     """
-    X = pd.DataFrame([feature_dict])
-    prob = _model.predict_proba(X)[0][1]
-    return round(float(prob * 100), 2)
+    X = np.array(feature_vector).reshape(1, -1)
+    prob = model.predict_proba(X)[0][1]
+    return float(prob)
