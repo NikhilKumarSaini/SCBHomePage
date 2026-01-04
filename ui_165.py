@@ -1,5 +1,4 @@
-# ======================= ANALYZE DOCUMENT =======================
-
+# ================= ANALYZE DOCUMENT =================
 if st.button("Analyze Document"):
 
     if not uploaded_file:
@@ -24,7 +23,7 @@ if st.button("Analyze Document"):
         time.sleep(0.4)
         progress.progress(int((i + 1) / len(steps) * 100))
 
-    # ======================= SAVE FILE =======================
+    # ================= SAVE FILE =================
     timestamp = int(time.time())
     safe_name = f"{timestamp}_{uploaded_file.name.replace(' ', '_')}"
     file_path = UPLOAD_DIR / safe_name
@@ -32,7 +31,7 @@ if st.button("Analyze Document"):
     with open(file_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
-    # ======================= SAVE UPLOAD METADATA =======================
+    # ================= SAVE UPLOAD METADATA =================
     record_id = save_upload_metadata(
         filename=uploaded_file.name,
         filepath=str(file_path),
@@ -43,109 +42,82 @@ if st.button("Analyze Document"):
 
     st.session_state.record_id = record_id
 
-    # ======================= PDF METADATA =======================
-    pdf_meta = {}
+    # ================= PDF METADATA =================
     if uploaded_file.type == "application/pdf":
         pdf_meta = extract_pdf_metadata(str(file_path))
         save_pdf_metadata(upload_id=record_id, metadata=pdf_meta)
 
     st.success(f"Document uploaded successfully (Record ID: {record_id})")
 
-    # ======================= RUN FORENSICS =======================
+    # ================= RUN FORENSICS =================
     try:
-        subprocess.run(
-            ["python", str(DETAILS_SCRIPT)],
-            check=True
-        )
-
         subprocess.run(
             ["python", str(FORENCICS_SCRIPT)],
             check=True
         )
-
         st.success("Forensic processing completed")
-
     except Exception as e:
         st.error(f"Forensic analysis failed: {e}")
         st.stop()
 
-    # ======================= RUN SCORING =======================
+    # ================= RUN SCORING =================
     st.write("Starting scoring...")
-
-    from scoring.final_runner import run_scoring
-
-    forensics_output_dir = FORENSICS_OUTPUT_DIR / safe_name.replace(".pdf", "")
-
-    scoring_result = run_scoring(
-        pdf_path=str(file_path),
-        forensics_output_dir=str(forensics_output_dir),
-        pdf_metadata=pdf_meta
-    )
+    scoring_result = run_scoring(record_id)
 
     st.session_state.scoring_result = scoring_result
     st.success("Scoring completed")
 
-# ======================= RESULTS CARD =======================
-
+# ================= RESULTS CARD =================
 result = st.session_state.get("scoring_result")
 
 if result:
+    risk_score = float(result.get("risk_score", 0))
+    verdict = result.get("verdict", "Unknown")
+    ela_score = round(float(result.get("ela_score", 0)), 2)
+    noise_score = round(float(result.get("noise_score", 0)), 2)
+    compression_score = round(float(result.get("compression_score", 0)), 2)
+
+    if risk_score < 30:
+        color = "green"
+        level = "LOW RISK"
+    elif risk_score < 60:
+        color = "orange"
+        level = "MEDIUM RISK"
+    else:
+        color = "red"
+        level = "HIGH RISK"
+
     st.markdown("---")
-    st.markdown("## 🧠 Forensic Risk Assessment")
+    st.markdown("## 🔍 Analysis Result")
 
-    col1, col2, col3 = st.columns(3)
+    st.markdown(
+        f"""
+        <div style="padding:20px;border-radius:10px;border:1px solid #ddd">
+            <h2 style="color:{color};margin-bottom:0">Risk Score: {risk_score:.2f}</h2>
+            <h4 style="color:{color};margin-top:5px">{level}</h4>
+            <p><b>Verdict:</b> {verdict}</p>
+            <hr>
+            <p>ELA Score: {ela_score}</p>
+            <p>Noise Score: {noise_score}</p>
+            <p>Compression Score: {compression_score}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    with col1:
-        st.metric(
-            "Risk Score",
-            f"{result['final_score']} %",
-        )
-
-    with col2:
-        st.metric(
-            "Verdict",
-            "Manipulated" if result["ml_label"] == 1 else "Clean"
-        )
-
-    with col3:
-        st.metric(
-            "ML Probability",
-            result["ml_probability"]
-        )
-
-    st.markdown("### 🔍 Forensic Signals")
-
-    c1, c2, c3, c4, c5 = st.columns(5)
-
-    c1.metric("ELA", round(result["ela_score"], 3))
-    c2.metric("Noise", round(result["noise_score"], 3))
-    c3.metric("Compression", round(result["compression_score"], 3))
-    c4.metric("Metadata", round(result["metadata_score"], 3))
-    c5.metric("Font Align", round(result["font_score"], 3))
-
-    # ======================= DOWNLOAD REPORT =======================
-    st.markdown("---")
-
-    report_json = json.dumps(result, indent=4)
+    # ================= DOWNLOAD REPORT =================
+    report_data = json.dumps(result, indent=4)
 
     st.download_button(
-        label="⬇️ Download Forensic Report",
-        data=report_json,
-        file_name=f"{safe_name}_forensic_report.json",
+        label="⬇ Download Forensic Report",
+        data=report_data,
+        file_name=f"forensic_report_{result.get('record_id','doc')}.json",
         mime="application/json"
     )
 
-# ======================= FOOTER =======================
-
+# ================= FOOTER =================
+st.markdown("---")
 st.markdown(
-    """
-    <hr>
-    <center>
-        <small>
-            ML Forensic Risk Assessment System<br>
-            © Standard Chartered – Internal Use Only
-        </small>
-    </center>
-    """,
+    "<center>ML Forensic Project • Secure Document Analysis</center>",
     unsafe_allow_html=True
 )
