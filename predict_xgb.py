@@ -1,31 +1,21 @@
-import joblib
+# ml/predict_xgb.py
+
 import os
+import joblib
 import pandas as pd
+
+from ml.feature_builder import FEATURES
 
 BASE_DIR = os.path.dirname(__file__)
 MODEL_PATH = os.path.join(BASE_DIR, "xgb_model.pkl")
 
-FEATURES = [
-    "ela_score",
-    "noise_score",
-    "compression_score",
-    "font_score",
-    "metadata_score",
-    "forensic_risk"
-]
-
 
 def predict_risk(feature_dict: dict) -> dict:
     """
-    Returns:
-    {
-        probability: float,
-        verdict: LOW / MEDIUM / HIGH
-    }
+    Predicts manipulation risk using trained XGBoost model
     """
-
     if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError("Model not trained yet")
+        raise FileNotFoundError("XGBoost model not trained yet")
 
     model = joblib.load(MODEL_PATH)
 
