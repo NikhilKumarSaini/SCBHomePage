@@ -1,14 +1,15 @@
-# ====================== ANALYZE DOCUMENT ======================
+# ========================== ANALYZE DOCUMENT ==========================
 
 if st.button("Analyze Document"):
+
     if not uploaded_file:
         st.error("Please upload a document first")
         st.stop()
 
-    # ---------- Progress UI ----------
     steps = [
         "Uploading document",
-        "Saving file",
+        "Validating file",
+        "Saving to secure storage",
         "Extracting metadata",
         "Running forensic analysis",
         "Calculating risk score"
@@ -22,7 +23,8 @@ if st.button("Analyze Document"):
         time.sleep(0.4)
         progress.progress(int((i + 1) / len(steps) * 100))
 
-    # ---------- SAVE FILE ----------
+    # ========================== SAVE FILE ==========================
+
     timestamp = int(time.time())
     safe_name = f"{timestamp}_{uploaded_file.name.replace(' ', '_')}"
     file_path = UPLOAD_DIR / safe_name
@@ -30,41 +32,65 @@ if st.button("Analyze Document"):
     with open(file_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
-    st.success(f"Document uploaded successfully (Record ID: {timestamp})")
+    # ========================== SAVE METADATA ==========================
 
-    # ---------- RUN FORENSICS ----------
+    record_id = save_upload_metadata(
+        filename=uploaded_file.name,
+        filepath=str(file_path),
+        content_type=uploaded_file.type,
+        size_bytes=len(uploaded_file.getvalue()),
+        uploaded_by="user"
+    )
+
+    st.success(f"Document uploaded successfully (Record ID: {record_id})")
+
+    # ========================== PDF METADATA ==========================
+
+    pdf_meta = {}
+    if uploaded_file.type == "application/pdf":
+        pdf_meta = extract_pdf_metadata(str(file_path))
+        save_pdf_metadata(upload_id=record_id, metadata=pdf_meta)
+
+    # ========================== RUN FORENSICS ==========================
+
     try:
         subprocess.run(
-            ["python", str(FORENSICS_SCRIPT), str(file_path), str(timestamp)],
+            ["python", str(DETAILS_SCRIPT), str(file_path), str(record_id)],
             check=True
         )
+
+        subprocess.run(
+            ["python", str(FORENSICS_SCRIPT), str(file_path), str(record_id)],
+            check=True
+        )
+
         st.success("Forensic processing completed")
+
     except Exception as e:
         st.error(f"Forensic analysis failed: {e}")
         st.stop()
 
-    # ---------- RUN SCORING ----------
-    st.write("Starting scoring...")
-    try:
-        scoring_result = run_scoring(
-            record_id=timestamp,
-            pdf_path=str(file_path)
-        )
-        st.session_state.scoring_result = scoring_result
-        st.success("Scoring completed")
-    except Exception as e:
-        st.error(f"Scoring failed: {e}")
-        st.stop()
+    # ========================== RUN SCORING ==========================
 
-# ====================== RESULTS CARD ======================
+    st.write("Starting scoring...")
+
+    forensics_output_dir = ANALYSIS_OUTPUT_ROOT / str(record_id)
+
+    scoring_result = run_scoring(
+        record_id,
+        forensics_output_dir,
+        pdf_meta
+    )
+
+    st.session_state.scoring_result = scoring_result
+    st.success("Scoring completed")
+
+# ========================== RESULTS CARD ==========================
 
 result = st.session_state.get("scoring_result")
 
 if result:
-    st.markdown("---")
-    st.subheader("📊 Forensic Analysis Result")
-
-    risk_score = float(result.get("ml_probability", 0))
+    risk_score = float(result.get("risk_score", 0))
     verdict = result.get("verdict", "Unknown")
 
     ela = round(float(result.get("ela_score", 0)), 2)
@@ -72,53 +98,61 @@ if result:
     compression = round(float(result.get("compression_score", 0)), 2)
     font = round(float(result.get("font_score", 0)), 2)
 
-    # ---------- Color Logic ----------
-    if risk_score >= 0.7:
-        color = "🔴"
-    elif risk_score >= 0.4:
-        color = "🟠"
+    if risk_score < 30:
+        color = "green"
+        level = "LOW RISK"
+    elif risk_score < 70:
+        color = "orange"
+        level = "MEDIUM RISK"
     else:
-        color = "🟢"
+        color = "red"
+        level = "HIGH RISK"
 
-    # ---------- Summary ----------
+    st.markdown("---")
+    st.markdown("## 📊 Forensic Risk Assessment")
+
     st.markdown(
         f"""
-        ### {color} Verdict: **{verdict}**
-
-        **Manipulation Probability:** `{round(risk_score, 3)}`
-
-        ---
-        **Forensic Scores**
-        - ELA Score: `{ela}`
-        - Noise Score: `{noise}`
-        - Compression Score: `{compression}`
-        - Font Alignment Score: `{font}`
-        """
+        <div style="padding:20px;border-radius:12px;border:2px solid {color};">
+            <h2 style="color:{color};">Risk Score: {risk_score:.2f}</h2>
+            <h3>{level}</h3>
+            <p><b>Verdict:</b> {verdict}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-    # ---------- DOWNLOAD REPORT ----------
-    report_text = f"""
-ML Forensic Analysis Report
---------------------------
-Record ID: {result.get('record_id')}
+    st.markdown("### 🔍 Individual Forensic Signals")
+    st.write(f"ELA Score: {ela}")
+    st.write(f"Noise Score: {noise}")
+    st.write(f"Compression Score: {compression}")
+    st.write(f"Font Alignment Score: {font}")
 
-Verdict: {verdict}
-Manipulation Probability: {risk_score}
+    # ========================== DOWNLOAD REPORT ==========================
 
-ELA Score: {ela}
-Noise Score: {noise}
-Compression Score: {compression}
-Font Alignment Score: {font}
-"""
+    report_path = Path("reports") / f"forensic_report_{record_id}.txt"
 
-    st.download_button(
-        label="📥 Download Report",
-        data=report_text,
-        file_name=f"forensic_report_{result.get('record_id')}.txt",
-        mime="text/plain"
-    )
+    with open(report_path, "w") as f:
+        f.write(f"Record ID: {record_id}\n")
+        f.write(f"Risk Score: {risk_score}\n")
+        f.write(f"Verdict: {verdict}\n\n")
+        f.write(f"ELA Score: {ela}\n")
+        f.write(f"Noise Score: {noise}\n")
+        f.write(f"Compression Score: {compression}\n")
+        f.write(f"Font Alignment Score: {font}\n")
 
-# ====================== FOOTER ======================
+    with open(report_path, "rb") as f:
+        st.download_button(
+            label="📥 Download Forensic Report",
+            data=f,
+            file_name=report_path.name,
+            mime="text/plain"
+        )
+
+# ========================== FOOTER ==========================
 
 st.markdown("---")
-st.caption("ML Forensic Project • Internal Use Only")
+st.markdown(
+    "<center>ML Document Forensics System • Internal Risk Assessment Tool</center>",
+    unsafe_allow_html=True
+)
