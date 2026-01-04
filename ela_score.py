@@ -1,24 +1,39 @@
-import cv2
 import numpy as np
+from PIL import Image
+from SourceCode.ela import perform_ela
 import os
+import tempfile
 
-def calculate_ela_score(ela_image_path: str) -> float:
+def compute_ela_score(image_path: str) -> float:
     """
-    Calculates ELA inconsistency score based on pixel intensity variance
-    Returns value between 0.0 – 0.7
+    Runs ELA using existing code and computes a normalized ELA score.
+    Returns value between 0 and 1.
     """
-    if not os.path.exists(ela_image_path):
-        return 0.0
 
-    img = cv2.imread(ela_image_path, cv2.IMREAD_GRAYSCALE)
-    if img is None:
-        return 0.0
+    # create temp file for ELA output
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+        ela_output_path = tmp.name
 
-    mean_intensity = np.mean(img)
+    try:
+        # run existing ELA (UNCHANGED)
+        perform_ela(
+            image_path=image_path,
+            save_path=ela_output_path,
+            quality=90
+        )
 
-    if mean_intensity < 10:
-        return 0.1
-    elif mean_intensity < 20:
-        return 0.4
-    else:
-        return 0.7
+        # load ELA image
+        ela_img = Image.open(ela_output_path).convert("L")
+        ela_array = np.array(ela_img, dtype=np.float32)
+
+        # mean intensity
+        mean_intensity = np.mean(ela_array)
+
+        # normalize (0–255 → 0–1)
+        ela_score = mean_intensity / 255.0
+
+        return round(float(ela_score), 4)
+
+    finally:
+        if os.path.exists(ela_output_path):
+            os.remove(ela_output_path)
