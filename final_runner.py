@@ -12,46 +12,38 @@ from scoring.final_score import compute_final_score
 from ml.predict_xgb import predict_risk
 
 
-def run_scoring(record_id: int, pdf_path: str) -> dict:
+def run_scoring(pdf_name: str, pdf_path: str, record_id: int) -> dict:
     """
-    End-to-end forensic + ML scoring pipeline
+    FINAL LOCKED SCORING PIPELINE
+    SourceCode folder names = truth
     """
 
-    # --------------------------------------------------
-    # PATH SETUP
-    # --------------------------------------------------
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    FORENSICS_OUTPUT_ROOT = os.path.join(PROJECT_ROOT, "Forensics_Output")
+    FORENSICS_ROOT = os.path.join(PROJECT_ROOT, "Forensics_Output")
     REPORTS_DIR = os.path.join(PROJECT_ROOT, "reports")
-
     os.makedirs(REPORTS_DIR, exist_ok=True)
 
-    # This folder is created by SourceCode/forensics.py
-    forensic_output_dir = os.path.join(
-        FORENSICS_OUTPUT_ROOT,
-        f"{record_id}_statement_manipulated"
-    )
+    forensic_dir = os.path.join(FORENSICS_ROOT, pdf_name)
 
-    if not os.path.exists(forensic_output_dir):
+    if not os.path.exists(forensic_dir):
         raise FileNotFoundError(
-            f"Forensics output directory not found: {forensic_output_dir}"
+            f"Forensics output folder not found: {forensic_dir}"
         )
 
     # --------------------------------------------------
-    # INDIVIDUAL FORENSIC SCORES
+    # Individual forensic scores
     # --------------------------------------------------
-    # ⚠️ ALL expect DIRECTORY, NOT single image
-    ela_score = compute_ela_score(forensic_output_dir)
-    noise_score = compute_noise_score(forensic_output_dir)
-    compression_score = compute_compression_score(forensic_output_dir)
-    font_score = compute_font_alignment_score(forensic_output_dir)
+    ela_score = compute_ela_score(forensic_dir)
+    noise_score = compute_noise_score(forensic_dir)
+    compression_score = compute_compression_score(forensic_dir)
+    font_score = compute_font_alignment_score(forensic_dir)
 
-    # PDF-level score
-    metadata_score = compute_metadata_score(pdf_path)
+    # Metadata score from DB
+    metadata_score = compute_metadata_score(record_id)
 
     # --------------------------------------------------
-    # AGGREGATED FORENSIC RISK
+    # Aggregate forensic risk
     # --------------------------------------------------
     forensic_risk = compute_final_score(
         ela_score=ela_score,
@@ -62,7 +54,7 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     )
 
     # --------------------------------------------------
-    # ML PREDICTION (XGBoost)
+    # ML Prediction (XGBoost)
     # --------------------------------------------------
     ml_result = predict_risk({
         "ela_score": ela_score,
@@ -74,11 +66,24 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     })
 
     # --------------------------------------------------
-    # FINAL REPORT JSON
+    # Verdict logic
+    # --------------------------------------------------
+    final_risk_score = ml_result.get("risk_score", forensic_risk)
+
+    if final_risk_score >= 70:
+        verdict = "High Risk"
+    elif final_risk_score >= 40:
+        verdict = "Medium Risk"
+    else:
+        verdict = "Low Risk"
+
+    # --------------------------------------------------
+    # Final report JSON
     # --------------------------------------------------
     report = {
+        "pdf_name": pdf_name,
         "record_id": record_id,
-        "timestamp": datetime.utcnow().isoformat(),
+        "generated_at": datetime.utcnow().isoformat(),
 
         "scores": {
             "ela_score": ela_score,
@@ -89,20 +94,18 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
             "forensic_risk": forensic_risk
         },
 
-        "ml_result": ml_result
+        "ml_result": ml_result,
+        "final_risk_score": final_risk_score,
+        "verdict": verdict
     }
 
     report_path = os.path.join(
         REPORTS_DIR,
-        f"{record_id}_final_report.json"
+        f"{pdf_name}_final_report.json"
     )
 
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=4)
 
-    # UI needs this
     report["report_path"] = report_path
-    report["final_risk_score"] = ml_result.get("risk_score", forensic_risk)
-    report["verdict"] = ml_result.get("verdict", "Unknown")
-
     return report
