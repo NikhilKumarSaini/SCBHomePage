@@ -1,88 +1,49 @@
 import pandas as pd
 import xgboost as xgb
-from pathlib import Path
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
 import joblib
+import os
 
-# =========================
-# PATH CONFIG
-# =========================
-BASE_DIR = Path(__file__).parent
-DATASET_PATH = BASE_DIR / "ml_features.csv"
-MODEL_PATH = BASE_DIR / "xgb_model.pkl"
+BASE_DIR = os.path.dirname(__file__)
+CSV_PATH = os.path.join(BASE_DIR, "ml_features.csv")
+MODEL_PATH = os.path.join(BASE_DIR, "xgb_model.pkl")
 
-# =========================
-# LOAD DATASET
-# =========================
-if not DATASET_PATH.exists():
-    raise FileNotFoundError(f"Dataset not found at {DATASET_PATH}")
-
-df = pd.read_csv(DATASET_PATH)
-
-required_columns = [
+FEATURES = [
     "ela_score",
     "noise_score",
     "compression_score",
-    "cnn_f1",
-    "cnn_f2",
-    "label"
+    "font_score",
+    "metadata_score",
+    "forensic_risk"
 ]
 
-missing_cols = set(required_columns) - set(df.columns)
-if missing_cols:
-    raise ValueError(f"Missing columns in dataset: {missing_cols}")
 
-# =========================
-# FEATURES & LABEL
-# =========================
-X = df.drop("label", axis=1)
-y = df["label"]
+def train_model():
+    if not os.path.exists(CSV_PATH):
+        raise FileNotFoundError("ml_features.csv not found")
 
-# =========================
-# TRAIN-TEST SPLIT
-# =========================
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.25,
-    random_state=42,
-    stratify=y
-)
+    df = pd.read_csv(CSV_PATH)
 
-# =========================
-# XGBOOST MODEL
-# =========================
-model = xgb.XGBClassifier(
-    n_estimators=150,
-    max_depth=5,
-    learning_rate=0.1,
-    subsample=0.9,
-    colsample_bytree=0.9,
-    objective="binary:logistic",
-    eval_metric="logloss",
-    random_state=42
-)
+    if "label" not in df.columns:
+        raise ValueError("Training requires label column")
 
-# =========================
-# TRAIN
-# =========================
-model.fit(X_train, y_train)
+    X = df[FEATURES]
+    y = df["label"]
 
-# =========================
-# EVALUATE
-# =========================
-y_pred = model.predict(X_test)
+    model = xgb.XGBClassifier(
+        n_estimators=120,
+        max_depth=4,
+        learning_rate=0.08,
+        subsample=0.9,
+        colsample_bytree=0.9,
+        eval_metric="logloss",
+        random_state=42
+    )
 
-accuracy = accuracy_score(y_test, y_pred)
-print("\nXGBoost Model Evaluation")
-print("========================")
-print(f"Accuracy: {accuracy:.4f}")
-print("\nClassification Report:")
-print(classification_report(y_test, y_pred))
+    model.fit(X, y)
 
-# =========================
-# SAVE MODEL
-# =========================
-joblib.dump(model, MODEL_PATH)
-print(f"\nModel saved successfully at: {MODEL_PATH}")
+    joblib.dump(model, MODEL_PATH)
+    print("✅ XGBoost model trained & saved")
+
+
+if __name__ == "__main__":
+    train_model()
