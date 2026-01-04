@@ -1,79 +1,47 @@
 import os
-import json
-from db_utils import fetch_upload
-from utils.pdf_metadata import get_pdf_metadata
+from scoring.ela_score import compute_ela_score
+from scoring.noise_score import compute_noise_score
+from scoring.compression_score import compute_compression_score
+from scoring.metadata_score import compute_metadata_score
+from scoring.font_alignment_score import compute_font_alignment_score
+from scoring.final_score import compute_final_score
 
-from scoring.ela_score import calculate_ela_score
-from scoring.metadata_score import calculate_metadata_score
-from scoring.final_score import calculate_final_risk
 
-
-def run_scoring(upload_id: int) -> dict:
+def run_final_scoring(
+    pdf_path: str,
+    forensics_output_dir: str,
+    pdf_metadata: dict
+) -> dict:
     """
-    Main scoring entrypoint using DB upload_id
+    Main scoring entry point.
     """
 
-    # 1️⃣ Fetch upload details from DB
-    upload = fetch_upload(upload_id)
-    if not upload:
-        raise ValueError("Invalid upload_id")
+    # ---- Paths (adjust ONLY if folder names differ) ----
+    ela_image = os.path.join(forensics_output_dir, "ELA", "page_1.jpg")
+    noise_image = os.path.join(forensics_output_dir, "Noise", "page_1.jpg")
+    compression_image = os.path.join(forensics_output_dir, "Compression", "page_1.jpg")
+    font_alignment_image = os.path.join(forensics_output_dir, "FontAlignment", "page_1.jpg")
 
-    filename = upload["filename"]
-    filepath = upload["filepath"]
+    # ---- Individual forensic scores (0–1) ----
+    ela_score = compute_ela_score(ela_image)
+    noise_score = compute_noise_score(noise_image)
+    compression_score = compute_compression_score(compression_image)
+    metadata_score = compute_metadata_score(pdf_metadata)
+    font_score = compute_font_alignment_score(font_alignment_image)
 
-    # 2️⃣ Locate forensic output folder
-    forensic_dir = None
-    base_dir = "Forensics_Output"
-
-folders = [
-    os.path.join(base_dir, d)
-    for d in os.listdir(base_dir)
-    if os.path.isdir(os.path.join(base_dir, d))
-]
-
-if not folders:
-    raise FileNotFoundError("No forensic output folders found")
-
-# pick latest folder (most recent analysis)
-forensic_dir = max(folders, key=os.path.getmtime)
-
-    if not forensic_dir:
-        raise FileNotFoundError("Forensic output not found")
-
-    # 3️⃣ Locate ELA image
-    ela_image = os.path.join(forensic_dir, "ELA", "page-1.jpg")
-
-    # 4️⃣ Read PDF metadata
-    pdf_metadata = get_pdf_metadata(filepath)
-
-    # 5️⃣ Calculate individual scores
-    ela_score = calculate_ela_score(ela_image)
-    metadata_score = calculate_metadata_score(pdf_metadata)
-
-    # placeholders (already processed by your pipeline)
-    compression_score = 0.5
-    ocr_score = 0.3
-
-    # 6️⃣ Final risk calculation
-    final = calculate_final_risk(
-        ela_score,
-        compression_score,
-        ocr_score,
-        metadata_score
+    # ---- Final combined score ----
+    final_result = compute_final_score(
+        ela_score=ela_score,
+        noise_score=noise_score,
+        compression_score=compression_score,
+        metadata_score=metadata_score,
+        font_score=font_score
     )
 
-    result = {
-        "upload_id": upload_id,
-        "filename": filename,
-        "ela_score": ela_score,
-        "metadata_score": metadata_score,
-        "compression_score": compression_score,
-        "ocr_score": ocr_score,
-        **final
+    # ---- Attach traceability ----
+    final_result["inputs"] = {
+        "pdf": pdf_path,
+        "forensics_dir": forensics_output_dir
     }
 
-    os.makedirs("reports", exist_ok=True)
-    with open(f"reports/{upload_id}_final_report.json", "w") as f:
-        json.dump(result, f, indent=4)
-
-    return result
+    return final_result
