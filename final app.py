@@ -1,6 +1,5 @@
 import streamlit as st
 import os
-import time
 import subprocess
 from pathlib import Path
 from dotenv import load_dotenv
@@ -15,15 +14,13 @@ from scoring.final_runner import run_scoring
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
+
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 SOURCE_CODE_DIR = BASE_DIR / "SourceCode"
 DETAILS_SCRIPT = SOURCE_CODE_DIR / "details.py"
 FORENSICS_SCRIPT = SOURCE_CODE_DIR / "forensics.py"
-
-ANALYSIS_OUTPUT_ROOT = BASE_DIR / "Forensics_Output"
-ANALYSIS_OUTPUT_ROOT.mkdir(exist_ok=True)
 
 LOGO_PATH = BASE_DIR / "logo.png"
 
@@ -132,15 +129,16 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
-# ANALYZE BUTTON (🔥 FULLY FIXED FLOW)
+# ANALYZE BUTTON (FINAL, ALIGNED WITH SCORING + ML)
 # ------------------------------------------------------------------
 if st.button("Analyze Document"):
     if not uploaded_file:
         st.error("Please upload a document first")
     else:
         with st.spinner("Running forensic analysis..."):
+
             # ----------------------------------------------------------
-            # SAVE FILE
+            # SAVE FILE TO DISK
             # ----------------------------------------------------------
             file_path = UPLOAD_DIR / uploaded_file.name
             with open(file_path, "wb") as f:
@@ -157,14 +155,15 @@ if st.button("Analyze Document"):
             )
 
             # ----------------------------------------------------------
-            # PDF METADATA EXTRACTION
+            # EXTRACT PDF METADATA
             # ----------------------------------------------------------
+            pdf_metadata = {}
             if uploaded_file.type == "application/pdf":
-                metadata = extract_pdf_metadata(str(file_path))
-                save_pdf_metadata(record_id, metadata)
+                pdf_metadata = extract_pdf_metadata(str(file_path))
+                save_pdf_metadata(record_id, pdf_metadata)
 
             # ----------------------------------------------------------
-            # PDF → IMAGES
+            # PDF → IMAGES (SourceCode)
             # ----------------------------------------------------------
             subprocess.run(
                 ["python", str(DETAILS_SCRIPT)],
@@ -172,7 +171,7 @@ if st.button("Analyze Document"):
             )
 
             # ----------------------------------------------------------
-            # IMAGE FORENSICS
+            # FORENSICS PIPELINE (SourceCode)
             # ----------------------------------------------------------
             subprocess.run(
                 ["python", str(FORENSICS_SCRIPT)],
@@ -180,11 +179,12 @@ if st.button("Analyze Document"):
             )
 
             # ----------------------------------------------------------
-            # SCORING + ML (🔥 FIXED ARGUMENTS)
+            # SCORING + ML (FINAL RUNNER)
             # ----------------------------------------------------------
-            scoring_result = run_scoring(
-                record_id,
-                str(file_path)
+            final_report = run_scoring(
+                record_id=record_id,
+                pdf_path=str(file_path),
+                metadata=pdf_metadata
             )
 
         st.success("Analysis completed successfully!")
@@ -194,25 +194,26 @@ if st.button("Analyze Document"):
         # ------------------------------------------------------------------
         st.markdown("### Forensic Risk Assessment")
 
-        risk_score = scoring_result.get("final_risk_score", 0)
-        verdict = scoring_result.get("verdict", "Unknown")
+        scores = final_report["scores"]
 
         col1, col2 = st.columns(2)
-        col1.metric("Risk Score", f"{risk_score:.2f} / 100")
-        col2.metric("Verdict", verdict)
+        col1.metric("Forensic Risk Score", f"{scores['forensic_risk']:.3f}")
+        col2.metric("Verdict", scores["verdict"])
 
-        # Detailed breakdown
         with st.expander("View Detailed Scores"):
-            st.json(scoring_result)
+            st.json(final_report)
 
-        # Download report
-        report_path = scoring_result.get("report_path")
+        # ------------------------------------------------------------------
+        # DOWNLOAD REPORT
+        # ------------------------------------------------------------------
+        report_path = final_report.get("report_path")
         if report_path and os.path.exists(report_path):
             with open(report_path, "rb") as f:
                 st.download_button(
                     "Download Full JSON Report",
                     f,
-                    file_name="forensic_report.json"
+                    file_name=f"{record_id}_final_report.json",
+                    mime="application/json"
                 )
 
 # ------------------------------------------------------------------
