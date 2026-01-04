@@ -1,49 +1,57 @@
-from datetime import datetime
+from datetime import timedelta
 
-SUSPICIOUS_PRODUCERS = [
-    "word",
-    "photoshop",
-    "canva",
-    "gimp",
-    "ilovepdf",
-    "smallpdf",
-    "pdfsam"
-]
-
-def compute_metadata_score(pdf_metadata: dict) -> float:
+def compute_metadata_score(metadata: dict) -> int:
     """
-    Converts PDF metadata inconsistencies into risk score (0–1)
+    metadata dict comes from utils/pdf_metadata.py → extract_pdf_metadata()
+
+    Expected keys:
+    - author
+    - creator
+    - producer
+    - creation_date (datetime | None)
+    - modified_date (datetime | None)
+    - num_pages
+    - is_encrypted
     """
 
-    score = 0.0
-    checks = 0
+    if not metadata:
+        return 25  # missing metadata itself suspicious
 
-    # ---- Creation vs Modification ----
-    created = pdf_metadata.get("CreationDate")
-    modified = pdf_metadata.get("ModDate")
+    score = 0
 
+    producer = (metadata.get("producer") or "").lower()
+    creator = (metadata.get("creator") or "").lower()
+
+    created = metadata.get("creation_date")
+    modified = metadata.get("modified_date")
+
+    # 1️⃣ Creation vs Modified date mismatch
     if created and modified:
-        checks += 1
-        try:
-            c = datetime.fromisoformat(created)
-            m = datetime.fromisoformat(modified)
-            if abs((m - c).total_seconds()) > 60:
-                score += 1
-        except:
-            score += 1
+        if modified > created + timedelta(minutes=2):
+            score += 35
+    else:
+        score += 10  # missing dates
 
-    # ---- Missing fields ----
-    for key in ["Author", "Creator", "Producer"]:
-        checks += 1
-        if not pdf_metadata.get(key):
-            score += 1
+    # 2️⃣ Editing software detection
+    suspicious_tools = ["photoshop", "gimp", "illustrator", "coreldraw"]
+    for tool in suspicious_tools:
+        if tool in producer or tool in creator:
+            score += 30
+            break
 
-    # ---- Suspicious producer tools ----
-    producer = (pdf_metadata.get("Producer") or "").lower()
-    checks += 1
-    if any(p in producer for p in SUSPICIOUS_PRODUCERS):
-        score += 1
+    # 3️⃣ Scanner / camera PDFs → low risk
+    safe_tools = ["scanner", "hp", "canon", "epson"]
+    for tool in safe_tools:
+        if tool in producer:
+            score += 5
+            break
 
-    # normalize
-    final_score = score / max(checks, 1)
-    return round(final_score, 4)
+    # 4️⃣ Encrypted PDFs (often edited/secured after generation)
+    if metadata.get("is_encrypted"):
+        score += 10
+
+    # 5️⃣ Page count sanity
+    if metadata.get("num_pages", 1) <= 0:
+        score += 10
+
+    return min(score, 100)
