@@ -1,41 +1,19 @@
-import json
-import csv
-from pathlib import Path
+import pandas as pd
+from ml.feature_builder import FEATURES
 
-REPORTS_DIR = Path("reports")
-OUT_CSV = Path("ml/ml_features.csv")
 
-fields = [
-    "ela_score",
-    "noise_score",
-    "compression_score",
-    "font_alignment_score",
-    "metadata_score",
-    "label"   # 1 = fake, 0 = real
-]
+def load_training_data(csv_path: str):
+    """
+    Loads CSV and splits into X, y
+    CSV must contain FEATURES + 'label'
+    """
+    df = pd.read_csv(csv_path)
 
-rows = []
+    missing = [f for f in FEATURES + ["label"] if f not in df.columns]
+    if missing:
+        raise ValueError(f"Missing columns in CSV: {missing}")
 
-for report in REPORTS_DIR.glob("*_final_report.json"):
-    with open(report) as f:
-        data = json.load(f)
+    X = df[FEATURES]
+    y = df["label"]
 
-    s = data["scoring"]
-
-    row = {
-        "ela_score": s["ela_score"],
-        "noise_score": s["noise_score"],
-        "compression_score": s["compression_score"],
-        "font_alignment_score": s["font_alignment_score"],
-        "metadata_score": s["metadata_score"],
-        "label": int(input(f"Is {data['file_name']} FAKE? (1=yes, 0=no): "))
-    }
-
-    rows.append(row)
-
-with open(OUT_CSV, "w", newline="") as f:
-    writer = csv.DictWriter(f, fieldnames=fields)
-    writer.writeheader()
-    writer.writerows(rows)
-
-print("ml_features.csv created")
+    return X, y
