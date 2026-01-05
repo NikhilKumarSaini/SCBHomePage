@@ -12,39 +12,46 @@ from scoring.final_score import compute_final_score
 from ml.predict_xgb import predict_risk
 
 
-def run_scoring(pdf_name: str, pdf_path: str, record_id: int) -> dict:
+def run_scoring(record_id: int, pdf_path: str) -> dict:
     """
-    FINAL LOCKED SCORING PIPELINE
-    SourceCode folder names = truth
+    Final stable scoring runner
+    - Automatically picks latest Forensics_Output/<unix>_<pdfname>
+    - No hardcoding
+    - ML + JSON report
     """
 
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-    FORENSICS_ROOT = os.path.join(PROJECT_ROOT, "Forensics_Output")
+    FORENSICS_OUTPUT_ROOT = os.path.join(PROJECT_ROOT, "Forensics_Output")
     REPORTS_DIR = os.path.join(PROJECT_ROOT, "reports")
+
     os.makedirs(REPORTS_DIR, exist_ok=True)
 
-    forensic_dir = os.path.join(FORENSICS_ROOT, pdf_name)
+    # -------------------------------------------------
+    # PICK LATEST FORENSICS OUTPUT (UNIX BASED)
+    # -------------------------------------------------
+    all_dirs = [
+        d for d in os.listdir(FORENSICS_OUTPUT_ROOT)
+        if os.path.isdir(os.path.join(FORENSICS_OUTPUT_ROOT, d))
+    ]
 
-    if not os.path.exists(forensic_dir):
-        raise FileNotFoundError(
-            f"Forensics output folder not found: {forensic_dir}"
-        )
+    if not all_dirs:
+        raise FileNotFoundError("No forensics output folders found")
 
-    # --------------------------------------------------
-    # Individual forensic scores
-    # --------------------------------------------------
-    ela_score = compute_ela_score(forensic_dir)
-    noise_score = compute_noise_score(forensic_dir)
-    compression_score = compute_compression_score(forensic_dir)
-    font_score = compute_font_alignment_score(forensic_dir)
+    latest_dir = sorted(all_dirs, reverse=True)[0]
+    forensic_output_dir = os.path.join(FORENSICS_OUTPUT_ROOT, latest_dir)
 
-    # Metadata score from DB
-    metadata_score = compute_metadata_score(record_id)
+    # -------------------------------------------------
+    # FORENSIC SCORES
+    # -------------------------------------------------
+    ela_score = compute_ela_score(forensic_output_dir)
+    noise_score = compute_noise_score(forensic_output_dir)
+    compression_score = compute_compression_score(forensic_output_dir)
+    font_score = compute_font_alignment_score(forensic_output_dir)
+    metadata_score = compute_metadata_score(pdf_path)
 
-    # --------------------------------------------------
-    # Aggregate forensic risk
-    # --------------------------------------------------
+    # -------------------------------------------------
+    # AGGREGATE RISK
+    # -------------------------------------------------
     forensic_risk = compute_final_score(
         ela_score=ela_score,
         noise_score=noise_score,
@@ -53,9 +60,9 @@ def run_scoring(pdf_name: str, pdf_path: str, record_id: int) -> dict:
         metadata_score=metadata_score
     )
 
-    # --------------------------------------------------
-    # ML Prediction (XGBoost)
-    # --------------------------------------------------
+    # -------------------------------------------------
+    # ML PREDICTION
+    # -------------------------------------------------
     ml_result = predict_risk({
         "ela_score": ela_score,
         "noise_score": noise_score,
@@ -65,25 +72,13 @@ def run_scoring(pdf_name: str, pdf_path: str, record_id: int) -> dict:
         "forensic_risk": forensic_risk
     })
 
-    # --------------------------------------------------
-    # Verdict logic
-    # --------------------------------------------------
-    final_risk_score = ml_result.get("risk_score", forensic_risk)
-
-    if final_risk_score >= 70:
-        verdict = "High Risk"
-    elif final_risk_score >= 40:
-        verdict = "Medium Risk"
-    else:
-        verdict = "Low Risk"
-
-    # --------------------------------------------------
-    # Final report JSON
-    # --------------------------------------------------
+    # -------------------------------------------------
+    # FINAL REPORT
+    # -------------------------------------------------
     report = {
-        "pdf_name": pdf_name,
         "record_id": record_id,
-        "generated_at": datetime.utcnow().isoformat(),
+        "timestamp": datetime.utcnow().isoformat(),
+        "forensics_folder": latest_dir,
 
         "scores": {
             "ela_score": ela_score,
@@ -94,14 +89,12 @@ def run_scoring(pdf_name: str, pdf_path: str, record_id: int) -> dict:
             "forensic_risk": forensic_risk
         },
 
-        "ml_result": ml_result,
-        "final_risk_score": final_risk_score,
-        "verdict": verdict
+        "ml_result": ml_result
     }
 
     report_path = os.path.join(
         REPORTS_DIR,
-        f"{pdf_name}_final_report.json"
+        f"{record_id}_final_report.json"
     )
 
     with open(report_path, "w", encoding="utf-8") as f:
