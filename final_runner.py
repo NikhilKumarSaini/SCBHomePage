@@ -15,9 +15,10 @@ from ml.predict_xgb import predict_risk
 def run_scoring(record_id: int, pdf_path: str) -> dict:
     """
     FINAL scoring runner
+    - Clean gate → score = 0
     - Forensics (70%) + ML (30%)
-    - Single FINAL SCORE (0–100)
-    - 6 professional risk categories
+    - Final score: 0–100
+    - 6 risk categories
     """
 
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -49,49 +50,67 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     font_score = compute_font_alignment_score(forensic_output_dir)
     metadata_score = compute_metadata_score(pdf_path)
 
-    forensic_risk = compute_final_score(
-        ela_score=ela_score,
-        noise_score=noise_score,
-        compression_score=compression_score,
-        font_score=font_score,
-        metadata_score=metadata_score
-    )
+    # -------------------------------------------------
+    # 🔑 CLEAN DOCUMENT GATE
+    # -------------------------------------------------
+    if (
+        ela_score < 0.05 and
+        noise_score < 0.05 and
+        compression_score < 0.05 and
+        font_score < 0.05
+    ):
+        final_score_100 = 0.0
+        risk_category = "Clean / No Risk"
+        forensic_risk = 0.0
+        ml_probability = 0.0
 
-    # -------------------------------------------------
-    # ML PROBABILITY (0–1)
-    # -------------------------------------------------
-    ml_result = predict_risk({
-        "ela_score": ela_score,
-        "noise_score": noise_score,
-        "compression_score": compression_score,
-        "font_score": font_score,
-        "metadata_score": metadata_score,
-        "forensic_risk": forensic_risk
-    })
-
-    ml_probability = ml_result.get("probability", 0.5)
-
-    # -------------------------------------------------
-    # FINAL COMBINED SCORE (0–100)
-    # -------------------------------------------------
-    final_score_01 = (0.7 * forensic_risk) + (0.3 * ml_probability)
-    final_score_100 = round(final_score_01 * 100, 2)
-
-    # -------------------------------------------------
-    # 6-LEVEL RISK CLASSIFICATION
-    # -------------------------------------------------
-    if final_score_100 < 10:
-        risk_category = "Very Low"
-    elif final_score_100 < 25:
-        risk_category = "Low"
-    elif final_score_100 < 40:
-        risk_category = "Moderate"
-    elif final_score_100 < 60:
-        risk_category = "Elevated"
-    elif final_score_100 < 80:
-        risk_category = "High"
     else:
-        risk_category = "Critical"
+        # -------------------------------------------------
+        # FORENSIC AGGREGATION
+        # -------------------------------------------------
+        forensic_risk = compute_final_score(
+            ela_score=ela_score,
+            noise_score=noise_score,
+            compression_score=compression_score,
+            font_score=font_score,
+            metadata_score=metadata_score
+        )
+
+        # -------------------------------------------------
+        # ML PROBABILITY (0–1)
+        # -------------------------------------------------
+        ml_result = predict_risk({
+            "ela_score": ela_score,
+            "noise_score": noise_score,
+            "compression_score": compression_score,
+            "font_score": font_score,
+            "metadata_score": metadata_score,
+            "forensic_risk": forensic_risk
+        })
+
+        ml_probability = ml_result.get("probability", 0.5)
+
+        # -------------------------------------------------
+        # FINAL COMBINED SCORE (0–100)
+        # -------------------------------------------------
+        final_score_01 = (0.7 * forensic_risk) + (0.3 * ml_probability)
+        final_score_100 = round(final_score_01 * 100, 2)
+
+        # -------------------------------------------------
+        # 6-LEVEL RISK CLASSIFICATION
+        # -------------------------------------------------
+        if final_score_100 < 10:
+            risk_category = "Very Low"
+        elif final_score_100 < 25:
+            risk_category = "Low"
+        elif final_score_100 < 40:
+            risk_category = "Moderate"
+        elif final_score_100 < 60:
+            risk_category = "Elevated"
+        elif final_score_100 < 80:
+            risk_category = "High"
+        else:
+            risk_category = "Critical"
 
     # -------------------------------------------------
     # FINAL REPORT
