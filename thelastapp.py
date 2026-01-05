@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import time
 import subprocess
 from pathlib import Path
 from dotenv import load_dotenv
@@ -33,7 +34,7 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------------
-# THEME / CSS (UNCHANGED UI)
+# THEME / CSS (UNCHANGED)
 # ------------------------------------------------------------------
 st.markdown("""
 <style>
@@ -129,7 +130,7 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
-# ANALYZE BUTTON (FINAL + SAFE)
+# ANALYZE BUTTON (FINAL, STABLE)
 # ------------------------------------------------------------------
 if st.button("Analyze Document"):
     if not uploaded_file:
@@ -155,11 +156,18 @@ if st.button("Analyze Document"):
             )
 
             # ----------------------------------------------------------
-            # EXTRACT PDF METADATA
+            # PDF METADATA
             # ----------------------------------------------------------
+            pdf_metadata = {}
             if uploaded_file.type == "application/pdf":
                 pdf_metadata = extract_pdf_metadata(str(file_path))
                 save_pdf_metadata(record_id, pdf_metadata)
+
+            # ----------------------------------------------------------
+            # 🔥 IMPORTANT: UNIX TIMESTAMP RUN ID (SourceCode compatible)
+            # ----------------------------------------------------------
+            run_id = f"{int(time.time())}_{Path(uploaded_file.name).stem}"
+            os.environ["RUN_ID"] = run_id
 
             # ----------------------------------------------------------
             # PDF → IMAGES (SourceCode)
@@ -178,14 +186,11 @@ if st.button("Analyze Document"):
             )
 
             # ----------------------------------------------------------
-            # SCORING + ML (FINAL RUNNER)
+            # SCORING + ML
             # ----------------------------------------------------------
-            pdf_name = Path(uploaded_file.name).stem
-
             final_report = run_scoring(
-                pdf_name=pdf_name,
-                pdf_path=str(file_path),
-                record_id=record_id
+                record_id=record_id,
+                pdf_path=str(file_path)
             )
 
         st.success("Analysis completed successfully!")
@@ -193,63 +198,29 @@ if st.button("Analyze Document"):
         # ------------------------------------------------------------------
         # RESULTS DISPLAY
         # ------------------------------------------------------------------
-        st.markdown("### 🔍 Forensic Risk Assessment")
+        st.markdown("### Forensic Risk Assessment")
 
-        final_risk = final_report.get("final_risk_score", 0)
-        verdict = final_report.get("verdict", "Unknown")
-        report_path = final_report.get("report_path")
+        scores = final_report["scores"]
+        ml_result = final_report["ml_result"]
 
-        c1, c2, c3 = st.columns(3)
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Record ID", record_id)
+        col2.metric("Forensic Risk", f"{scores['forensic_risk']:.3f}")
+        col3.metric("ML Verdict", ml_result["verdict"])
 
-        with c1:
-            st.markdown(
-                f"""
-                <div style="background:#F0F9FF;padding:20px;border-radius:10px;
-                            border-left:6px solid #0033A0;">
-                    <h4>Risk Score</h4>
-                    <h2>{final_risk:.2f} / 100</h2>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        with c2:
-            color = "#16A34A" if verdict == "Low Risk" else "#F59E0B" if verdict == "Medium Risk" else "#DC2626"
-            st.markdown(
-                f"""
-                <div style="background:#FFF7ED;padding:20px;border-radius:10px;
-                            border-left:6px solid {color};">
-                    <h4>Verdict</h4>
-                    <h2 style="color:{color};">{verdict}</h2>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        with c3:
-            st.markdown(
-                f"""
-                <div style="background:#F8FAFC;padding:20px;border-radius:10px;
-                            border-left:6px solid #64748B;">
-                    <h4>Record ID</h4>
-                    <h2>{record_id}</h2>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        # ------------------------------------------------------------------
-        # DETAILS + DOWNLOAD
-        # ------------------------------------------------------------------
-        with st.expander("📊 View Detailed Analysis JSON"):
+        with st.expander("View Detailed Analysis"):
             st.json(final_report)
 
+        # ------------------------------------------------------------------
+        # DOWNLOAD REPORT
+        # ------------------------------------------------------------------
+        report_path = final_report.get("report_path")
         if report_path and os.path.exists(report_path):
             with open(report_path, "rb") as f:
                 st.download_button(
-                    label="⬇ Download Forensic Report (JSON)",
-                    data=f,
-                    file_name=os.path.basename(report_path),
+                    "Download Full JSON Report",
+                    f,
+                    file_name=f"{record_id}_final_report.json",
                     mime="application/json"
                 )
 
