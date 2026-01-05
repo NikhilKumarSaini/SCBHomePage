@@ -119,12 +119,28 @@ with st.container():
     st.subheader("Upload Bank Statement")
 
     uploaded_file = st.file_uploader(
-        "Choose a PDF or image file",
-        type=["pdf", "png", "jpg", "jpeg"]
-    )
+    "Choose a PDF or image file",
+    type=["pdf", "png", "jpg", "jpeg"]
+)
 
-    if uploaded_file:
-        st.success(f"Selected file: {uploaded_file.name}")
+if uploaded_file:
+    st.success(f"Selected file: {uploaded_file.name}")
+
+# 👇 EXACT YAHI ADD KARNA HAI
+ALLOWED_TYPES = [
+    "application/pdf",
+    "image/png",
+    "image/jpeg"
+]
+
+if uploaded_file is not None:
+    if uploaded_file.type not in ALLOWED_TYPES:
+        st.error(
+            "❌ Unsupported file type.\n\n"
+            "Please upload only **PDF, PNG, JPG, or JPEG** files."
+        )
+        uploaded_file = None
+
 
     st.markdown("</div>", unsafe_allow_html=True)
 
