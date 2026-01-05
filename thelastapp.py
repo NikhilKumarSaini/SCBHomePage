@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import subprocess
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -119,44 +120,45 @@ with st.container():
     st.subheader("Upload Bank Statement")
 
     uploaded_file = st.file_uploader(
-    "Choose a PDF or image file",
-    type=["pdf", "png", "jpg", "jpeg"]
-)
+        "Choose a PDF or image file",
+        type=["pdf", "png", "jpg", "jpeg"]
+    )
 
-if uploaded_file:
-    st.success(f"Selected file: {uploaded_file.name}")
+    # ---------------- POPUP VALIDATION ----------------
+    ALLOWED_TYPES = [
+        "application/pdf",
+        "image/png",
+        "image/jpeg"
+    ]
 
-# 👇 EXACT YAHI ADD KARNA HAI
-ALLOWED_TYPES = [
-    "application/pdf",
-    "image/png",
-    "image/jpeg"
-]
-
-if uploaded_file is not None:
-    if uploaded_file.type not in ALLOWED_TYPES:
-        st.error(
-            "❌ Unsupported file type.\n\n"
-            "Please upload only **PDF, PNG, JPG, or JPEG** files."
-        )
-        uploaded_file = None
-
+    if uploaded_file:
+        if uploaded_file.type not in ALLOWED_TYPES:
+            st.error(
+                "❌ **Unsupported file type selected**\n\n"
+                "Please upload only **PDF, PNG, JPG, or JPEG** files."
+            )
+            uploaded_file = None
+        else:
+            st.success(f"Selected file: {uploaded_file.name}")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
-# ANALYZE BUTTON (FINAL + SAFE)
+# ANALYZE BUTTON
 # ------------------------------------------------------------------
 if st.button("Analyze Document"):
     if not uploaded_file:
-        st.error("Please upload a document first")
+        st.error("Please upload a valid document first")
     else:
         with st.spinner("Running forensic analysis... Please wait"):
 
             # ----------------------------------------------------------
-            # SAVE FILE
+            # SAVE FILE WITH UNIX TIMESTAMP (IMPORTANT)
             # ----------------------------------------------------------
-            file_path = UPLOAD_DIR / uploaded_file.name
+            unix_ts = int(time.time())
+            safe_name = f"{unix_ts}_{uploaded_file.name}"
+            file_path = UPLOAD_DIR / safe_name
+
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.read())
 
@@ -164,7 +166,7 @@ if st.button("Analyze Document"):
             # DB: SAVE UPLOAD METADATA
             # ----------------------------------------------------------
             record_id = save_upload_metadata(
-                filename=uploaded_file.name,
+                filename=safe_name,
                 filepath=str(file_path),
                 content_type=uploaded_file.type,
                 size_bytes=uploaded_file.size
@@ -178,20 +180,13 @@ if st.button("Analyze Document"):
                 save_pdf_metadata(record_id, metadata)
 
             # ----------------------------------------------------------
-            # SOURCECODE PIPELINE
+            # SOURCECODE PIPELINE (UNCHANGED)
             # ----------------------------------------------------------
-            subprocess.run(
-                ["python", str(DETAILS_SCRIPT)],
-                check=True
-            )
-
-            subprocess.run(
-                ["python", str(FORENSICS_SCRIPT)],
-                check=True
-            )
+            subprocess.run(["python", str(DETAILS_SCRIPT)], check=True)
+            subprocess.run(["python", str(FORENSICS_SCRIPT)], check=True)
 
             # ----------------------------------------------------------
-            # SCORING + ML (NO EXTRA ARGS)
+            # SCORING + ML
             # ----------------------------------------------------------
             final_report = run_scoring(
                 record_id=record_id,
@@ -210,11 +205,11 @@ if st.button("Analyze Document"):
 
         c1, c2, c3 = st.columns(3)
         c1.metric("Forensic Risk", f"{scores['forensic_risk']:.3f}")
-        c2.metric("ML Probability", f"{ml['probability']}")
+        c2.metric("ML Probability", ml["probability"])
         c3.metric("Verdict", ml["verdict"])
 
-        st.info(f"📁 Forensics Folder Used: `{final_report['forensics_folder']}`")
         st.info(f"🆔 Record ID: `{final_report['record_id']}`")
+        st.info(f"📁 Forensics Folder: `{final_report['forensics_folder']}`")
 
         with st.expander("🔍 Detailed Report JSON"):
             st.json(final_report)
