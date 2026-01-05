@@ -6,15 +6,23 @@ def compute_final_score(
     metadata_score: float
 ) -> float:
     """
-    Weighted forensic risk score (0–100)
+    Weighted forensic risk score
     """
 
+    weights = {
+        "ela": 0.25,
+        "noise": 0.20,
+        "compression": 0.20,
+        "font": 0.20,
+        "metadata": 0.15
+    }
+
     final_score = (
-        0.25 * ela_score +
-        0.20 * noise_score +
-        0.20 * compression_score +
-        0.20 * font_score +
-        0.15 * metadata_score
+        ela_score * weights["ela"] +
+        noise_score * weights["noise"] +
+        compression_score * weights["compression"] +
+        font_score * weights["font"] +
+        metadata_score * weights["metadata"]
     )
 
-    return round(min(final_score, 100.0), 2)
+    return round(final_score, 3)
