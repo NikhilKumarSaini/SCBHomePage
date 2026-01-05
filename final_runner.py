@@ -17,7 +17,7 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     Final stable scoring runner
     - Automatically picks latest Forensics_Output/<unix>_<pdfname>
     - No hardcoding
-    - ML + JSON report
+    - Forensics (70%) + ML (30%) calibrated decision
     """
 
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -50,7 +50,7 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     metadata_score = compute_metadata_score(pdf_path)
 
     # -------------------------------------------------
-    # AGGREGATE RISK
+    # AGGREGATE FORENSIC RISK (RULE-BASED)
     # -------------------------------------------------
     forensic_risk = compute_final_score(
         ela_score=ela_score,
@@ -61,7 +61,7 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     )
 
     # -------------------------------------------------
-    # ML PREDICTION
+    # ML PREDICTION (PROBABILISTIC)
     # -------------------------------------------------
     ml_result = predict_risk({
         "ela_score": ela_score,
@@ -71,6 +71,23 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
         "metadata_score": metadata_score,
         "forensic_risk": forensic_risk
     })
+
+    raw_ml_probability = ml_result.get("probability", 0.5)
+
+    # -------------------------------------------------
+    # FINAL CALIBRATED PROBABILITY (70% Forensics + 30% ML)
+    # -------------------------------------------------
+    final_probability = round(
+        (0.7 * forensic_risk) + (0.3 * raw_ml_probability),
+        3
+    )
+
+    if final_probability >= 0.70:
+        final_verdict = "High"
+    elif final_probability >= 0.40:
+        final_verdict = "Medium"
+    else:
+        final_verdict = "Low"
 
     # -------------------------------------------------
     # FINAL REPORT
@@ -89,7 +106,11 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
             "forensic_risk": forensic_risk
         },
 
-        "ml_result": ml_result
+        "ml_result": {
+            "raw_probability": raw_ml_probability,
+            "calibrated_probability": final_probability,
+            "verdict": final_verdict
+        }
     }
 
     report_path = os.path.join(
