@@ -1,61 +1,21 @@
-from db_utils import get_conn
+from PyPDF2 import PdfReader
 
 
-def compute_metadata_score(record_id: int) -> float:
-    """
-    Metadata-based risk score (0–100)
-    Uses pdf_metadata table
-    """
-
-    score = 0.0
-
-    conn = get_conn()
+def compute_metadata_score(pdf_path: str) -> float:
     try:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT
-                author,
-                creator,
-                creation_date,
-                modified_date,
-                is_encrypted
-            FROM pdf_metadata
-            WHERE upload_id = %s
-            ORDER BY id DESC
-            LIMIT 1
-            """,
-            (record_id,)
-        )
+        reader = PdfReader(pdf_path)
+        meta = reader.metadata
 
-        row = cur.fetchone()
-        if not row:
-            # No metadata found → suspicious
-            return 40.0
+        score = 0
+        if meta:
+            if meta.author:
+                score += 0.3
+            if meta.producer:
+                score += 0.3
+            if meta.creation_date:
+                score += 0.4
 
-        author, creator, created, modified, encrypted = row
+        return round(score, 3)
 
-        # -------------------------
-        # Scoring rules
-        # -------------------------
-
-        # Missing author / creator
-        if not author or author.strip() == "":
-            score += 15
-
-        if not creator or creator.strip() == "":
-            score += 15
-
-        # Modified after creation
-        if created and modified and modified > created:
-            score += 20
-
-        # Encrypted PDF
-        if encrypted:
-            score += 10
-
-        return min(score, 100.0)
-
-    finally:
-        cur.close()
-        conn.close()
+    except Exception:
+        return 0.0
