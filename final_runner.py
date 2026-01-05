@@ -14,10 +14,10 @@ from ml.predict_xgb import predict_risk
 
 def run_scoring(record_id: int, pdf_path: str) -> dict:
     """
-    Final stable scoring runner
-    - Automatically picks latest Forensics_Output/<unix>_<pdfname>
-    - No hardcoding
-    - Forensics (70%) + ML (30%) calibrated decision
+    FINAL scoring runner
+    - Forensics (70%) + ML (30%)
+    - Single FINAL SCORE (0–100)
+    - 6 professional risk categories
     """
 
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,7 +27,7 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     os.makedirs(REPORTS_DIR, exist_ok=True)
 
     # -------------------------------------------------
-    # PICK LATEST FORENSICS OUTPUT (UNIX BASED)
+    # PICK LATEST FORENSICS OUTPUT
     # -------------------------------------------------
     all_dirs = [
         d for d in os.listdir(FORENSICS_OUTPUT_ROOT)
@@ -41,7 +41,7 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     forensic_output_dir = os.path.join(FORENSICS_OUTPUT_ROOT, latest_dir)
 
     # -------------------------------------------------
-    # FORENSIC SCORES
+    # FORENSIC SCORES (0–1)
     # -------------------------------------------------
     ela_score = compute_ela_score(forensic_output_dir)
     noise_score = compute_noise_score(forensic_output_dir)
@@ -49,9 +49,6 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     font_score = compute_font_alignment_score(forensic_output_dir)
     metadata_score = compute_metadata_score(pdf_path)
 
-    # -------------------------------------------------
-    # AGGREGATE FORENSIC RISK (RULE-BASED)
-    # -------------------------------------------------
     forensic_risk = compute_final_score(
         ela_score=ela_score,
         noise_score=noise_score,
@@ -61,7 +58,7 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     )
 
     # -------------------------------------------------
-    # ML PREDICTION (PROBABILISTIC)
+    # ML PROBABILITY (0–1)
     # -------------------------------------------------
     ml_result = predict_risk({
         "ela_score": ela_score,
@@ -72,22 +69,29 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
         "forensic_risk": forensic_risk
     })
 
-    raw_ml_probability = ml_result.get("probability", 0.5)
+    ml_probability = ml_result.get("probability", 0.5)
 
     # -------------------------------------------------
-    # FINAL CALIBRATED PROBABILITY (70% Forensics + 30% ML)
+    # FINAL COMBINED SCORE (0–100)
     # -------------------------------------------------
-    final_probability = round(
-        (0.7 * forensic_risk) + (0.3 * raw_ml_probability),
-        3
-    )
+    final_score_01 = (0.7 * forensic_risk) + (0.3 * ml_probability)
+    final_score_100 = round(final_score_01 * 100, 2)
 
-    if final_probability >= 0.70:
-        final_verdict = "High"
-    elif final_probability >= 0.40:
-        final_verdict = "Medium"
+    # -------------------------------------------------
+    # 6-LEVEL RISK CLASSIFICATION
+    # -------------------------------------------------
+    if final_score_100 < 10:
+        risk_category = "Very Low"
+    elif final_score_100 < 25:
+        risk_category = "Low"
+    elif final_score_100 < 40:
+        risk_category = "Moderate"
+    elif final_score_100 < 60:
+        risk_category = "Elevated"
+    elif final_score_100 < 80:
+        risk_category = "High"
     else:
-        final_verdict = "Low"
+        risk_category = "Critical"
 
     # -------------------------------------------------
     # FINAL REPORT
@@ -97,19 +101,23 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
         "timestamp": datetime.utcnow().isoformat(),
         "forensics_folder": latest_dir,
 
-        "scores": {
-            "ela_score": ela_score,
-            "noise_score": noise_score,
-            "compression_score": compression_score,
-            "font_score": font_score,
-            "metadata_score": metadata_score,
-            "forensic_risk": forensic_risk
+        "final_result": {
+            "final_score": final_score_100,
+            "risk_category": risk_category
         },
 
-        "ml_result": {
-            "raw_probability": raw_ml_probability,
-            "calibrated_probability": final_probability,
-            "verdict": final_verdict
+        "components": {
+            "forensics": {
+                "ela_score": ela_score,
+                "noise_score": noise_score,
+                "compression_score": compression_score,
+                "font_score": font_score,
+                "metadata_score": metadata_score,
+                "forensic_risk": forensic_risk
+            },
+            "ml": {
+                "ml_probability": ml_probability
+            }
         }
     }
 
