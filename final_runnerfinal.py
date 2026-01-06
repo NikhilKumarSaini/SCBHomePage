@@ -14,11 +14,13 @@ from ml.predict_xgb import predict_risk
 
 def run_scoring(record_id: int, pdf_path: str) -> dict:
     """
-    FINAL scoring runner (LOCKED & CORRECT)
-    - Clean gate based ONLY on forensic signals
-    - ML is SOFT signal (ignored for clean docs)
-    - Forensics (70%) + ML (30%)
-    - Final score: 0–100
+    FINAL scoring runner (LOCKED – OPTION 2)
+    ---------------------------------------
+    ✔ Clean gate based ONLY on forensic risk
+    ✔ ML is SOFT signal (ignored for clean docs)
+    ✔ Forensics (70%) + ML (30%)
+    ✔ Final score: 0–100
+    ✔ Professional verdicts
     """
 
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,7 +30,7 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     os.makedirs(REPORTS_DIR, exist_ok=True)
 
     # -------------------------------------------------
-    # PICK LATEST FORENSICS OUTPUT (DIR ONLY)
+    # PICK LATEST FORENSICS OUTPUT
     # -------------------------------------------------
     all_dirs = [
         d for d in os.listdir(FORENSICS_OUTPUT_ROOT)
@@ -51,33 +53,27 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
     metadata_score = compute_metadata_score(pdf_path)
 
     # -------------------------------------------------
-    # 🔑 CLEAN GATE (FORENSIC ONLY)
+    # FORENSIC AGGREGATION (RULE BASED)
     # -------------------------------------------------
-    if (
-        ela_score < 0.05 and
-        noise_score < 0.05 and
-        compression_score < 0.05 and
-        font_score < 0.05
-    ):
-        forensic_risk = 0.0
-        ml_probability = 0.0
+    forensic_risk = compute_final_score(
+        ela_score=ela_score,
+        noise_score=noise_score,
+        compression_score=compression_score,
+        font_score=font_score,
+        metadata_score=metadata_score
+    )
+
+    # -------------------------------------------------
+    # 🔑 CLEAN DOCUMENT GATE (FORENSIC ONLY)
+    # -------------------------------------------------
+    if forensic_risk < 0.06:
         final_score_100 = 0.0
         risk_category = "Clean Document"
+        ml_probability = 0.0
 
     else:
         # -------------------------------------------------
-        # FORENSIC AGGREGATION
-        # -------------------------------------------------
-        forensic_risk = compute_final_score(
-            ela_score,
-            noise_score,
-            compression_score,
-            font_score,
-            metadata_score
-        )
-
-        # -------------------------------------------------
-        # ML (SOFT SIGNAL)
+        # ML PROBABILITY (SOFT SIGNAL)
         # -------------------------------------------------
         ml_result = predict_risk({
             "ela_score": ela_score,
@@ -97,7 +93,7 @@ def run_scoring(record_id: int, pdf_path: str) -> dict:
         final_score_100 = round(final_score_01 * 100, 2)
 
         # -------------------------------------------------
-        # NORMALIZATION / PROFESSIONAL VERDICTS
+        # PROFESSIONAL VERDICTS
         # -------------------------------------------------
         if final_score_100 < 10:
             final_score_100 = 0.0
