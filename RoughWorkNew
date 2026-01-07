@@ -1,0 +1,342 @@
+AI System to Detect Manipulated Bank Statements Using Image Forensics & Machine Learning
+
+1️⃣ Problem Statement (Short & Clear)
+Banks and financial institutions receive a very large number of bank statements and financial documents during loan processing, credit assessment, and KYC verification.
+In many cases, applicants intentionally manipulate these documents using tools such as Photoshop, Canva, or simple PDF editors to alter critical details like salary amount, account balance, or transaction history. These manipulations are often subtle and visually convincing.
+Manual verification is:
+
+
+Time-consuming
+
+
+Error-prone
+
+
+Unable to detect pixel-level or compression-based tampering
+
+
+There is a strong need for an automated, intelligent system that can analyze bank statements and reliably detect whether a document has been digitally altered.
+
+2️⃣ Solution Overview (What our system will do)
+Our solution is an end-to-end AI-powered document forensics system that automatically analyzes uploaded bank statements and identifies signs of manipulation.
+The system performs the following tasks:
+✔ Converts uploaded PDF bank statements into images for analysis
+✔ Applies multiple image forensics techniques to detect tampering
+✔ Extracts document metadata and structural patterns
+✔ Uses a Machine Learning model as a supporting decision layer
+✔ Produces a final tampering risk score (0–100) with clear classification
+✔ Generates a detailed forensic report that can be downloaded
+The solution acts as a fraud detection layer that banks or fintech platforms can integrate into their document verification workflows.
+
+3️⃣ High-Level Architecture Diagram
+(Illustrative – final implementation follows the same logical pipeline)
+User Upload → Image Processing → Forensics Analysis → Scoring Engine → ML Signal → Final Risk Report
+
+4️⃣ Detailed Architecture (Text Form)
+Step-by-Step Pipeline
+
+1. Document Ingestion
+
+
+The user uploads a bank statement in PDF or image format.
+
+
+Each uploaded document is stored securely with a unique identifier.
+
+
+PDFs are converted into images so that visual forensics techniques can be applied.
+
+
+
+2. Preprocessing
+
+
+Images are resized and normalized.
+
+
+Noise is reduced to avoid false positives.
+
+
+The document is prepared for forensic feature extraction.
+
+
+
+3. Image Forensics Engine
+This is the core part of the system and includes multiple independent forensic modules:
+
+1️⃣ Error Level Analysis (ELA)
+ELA detects differences in compression levels across the document.
+If certain regions have been edited and recompressed separately, they appear prominently in ELA images.
+
+2️⃣ Noise Pattern Analysis
+Natural documents have consistent noise patterns.
+Edited regions often show irregular noise due to copy-paste or re-rendering operations.
+
+3️⃣ Compression Artifact Analysis
+If only specific parts of the document are modified and saved again, compression artifacts become inconsistent across regions.
+
+4️⃣ Metadata Extraction
+PDF metadata is analyzed to identify:
+
+
+Editing tools (Photoshop, Canva, etc.)
+
+
+Creation and modification timestamps
+
+
+Producer and author information
+
+
+Unexpected metadata patterns often indicate document tampering.
+
+5️⃣ Font & Layout Consistency Analysis
+This module checks:
+
+
+Font size mismatches
+
+
+Alignment inconsistencies
+
+
+Irregular spacing in critical fields like amounts and names
+
+
+Such inconsistencies frequently occur when text is manually edited.
+
+4. OCR Engine (Optional / Supporting)
+
+
+OCR is used to extract text from the document.
+
+
+Extracted values can be validated against expected bank statement patterns.
+
+
+OCR also helps in highlighting suspicious textual regions.
+
+
+
+5. ML Classification
+A Machine Learning layer is added as a supporting signal, not the primary decision-maker.
+
+
+Forensic features are passed to an ML model.
+
+
+The model learns common manipulation patterns from synthetic data.
+
+
+ML output helps strengthen confidence in borderline cases.
+
+
+The final decision is dominated by forensics, with ML acting as an assistive layer.
+
+6. Report Generation
+For each document, the system generates:
+
+
+Final tampering risk score (0–100)
+
+
+Risk classification (Clean, Low, Moderate, High, etc.)
+
+
+Individual forensic scores
+
+
+Downloadable forensic evidence (images & analysis)
+
+
+Structured JSON report
+
+
+
+5️⃣ What Work Will Be Done (Team Responsibilities)
+👤 Member 1 – Forensics & ML
+
+
+Design and implementation of image forensics modules
+
+
+PDF to image conversion
+
+
+Feature extraction and calibration
+
+
+ML model training and integration
+
+
+Final scoring logic and risk classification
+
+
+
+👤 Member 2 – OCR, App & Visualization
+
+
+OCR pipeline implementation
+
+
+Streamlit-based user interface
+
+
+Visualization of forensic outputs
+
+
+Report download and UI integration
+
+
+
+🟦 Common Tasks
+
+
+Dataset creation
+
+
+Model testing and validation
+
+
+Documentation
+
+
+Open-source structuring
+
+
+
+6️⃣ Data Sources (Clearly Stated)
+No real customer or bank data is used.
+1. Synthetic Bank Statements
+
+
+Bank statement templates created programmatically
+
+
+Genuine documents generated automatically
+
+
+Tampered versions created by:
+
+
+Editing amounts
+
+
+Modifying text
+
+
+Changing fonts
+
+
+Recompressing selected regions
+
+
+
+
+
+2. Public Sample Statements
+
+
+Dummy/sample bank statement formats from public sources
+
+
+Masked PDFs without personal data
+
+
+
+Dataset Size Goal
+
+
+~200 genuine statements
+
+
+~600 manipulated versions
+
+
+~800 total documents
+
+
+
+7️⃣ Tech Stack
+Forensics & Machine Learning
+
+
+Python
+
+
+OpenCV
+
+
+PIL
+
+
+NumPy
+
+
+scikit-learn
+
+
+XGBoost / CNN (supporting)
+
+
+
+Metadata
+
+
+PyPDF2
+
+
+EXIF tools
+
+
+
+Web Application
+
+
+Streamlit
+
+
+PostgreSQL (for metadata storage)
+
+
+
+Deployment
+
+
+GitHub
+
+
+Docker (optional)
+
+
+Local / cloud demo environment
+
+
+
+8️⃣ Final Deliverables
+✔ End-to-end forensic analysis pipeline
+✔ Risk scoring engine (0–100)
+✔ ML-assisted fraud detection
+✔ Interactive web application
+✔ Downloadable forensic reports
+✔ Synthetic dataset
+✔ Open-source repository
+
+9️⃣ Summary
+
+We are building an AI-based system that automatically detects manipulated bank statements using image forensics and machine learning. The system analyzes PDFs and images, applies multiple forensic techniques, computes a calibrated risk score, and generates clear, explainable results. This solution can act as a reliable fraud detection layer for banks and fintech platforms.
+
+
+If you want next:
+
+
+PPT version (2–3 slides)
+
+
+Short manager demo script
+
+
+README.md for GitHub
+
+
+Just say the word 👊
