@@ -326,6 +326,31 @@ Local / cloud demo environment
 
 We are building an AI-based system that automatically detects manipulated bank statements using image forensics and machine learning. The system analyzes PDFs and images, applies multiple forensic techniques, computes a calibrated risk score, and generates clear, explainable results. This solution can act as a reliable fraud detection layer for banks and fintech platforms.
 
+14️⃣ Challenges & Limitations
+Challenges
+Forensic calibration:
+Techniques like ELA and compression are sensitive and may show mild signals even in genuine documents created using Word, scanners, or re-exported PDFs.
+False positives:
+Distinguishing between benign document complexity and actual manipulation required careful threshold tuning.
+Synthetic data constraints:
+Synthetic datasets do not fully capture advanced real-world fraud techniques, which can affect ML generalization.
+ELA variability:
+ELA results depend on image resolution and PDF-to-image conversion quality.
+ML confidence stability:
+ML predictions may remain conservative in borderline cases and require calibration with forensic scores.
+Limitations
+Optimized mainly for bank statements
+Performance may vary on low-quality scans
+OCR accuracy depends on document clarity
+15️⃣ Next Steps & Improvements
+Future Enhancements
+Expand dataset with more diverse and realistic synthetic samples
+Improve forensic score normalization across document types
+Add deep-learning-based tampering localization
+Strengthen ML models using ensemble or CNN-based approaches
+Enhance OCR-based semantic validation of transactions
+Expose the system as an API for real-world banking integration
+
 
 If you want next:
 
