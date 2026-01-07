@@ -1,0 +1,308 @@
+Slide 2 – Problem Statement
+Problem Statement
+
+Banks process thousands of bank statements during loan and KYC verification.
+
+Many applicants manipulate documents using tools like:
+
+Photoshop
+
+Canva
+
+PDF editors
+
+These manipulations include:
+
+Changing balances
+
+Editing salary amounts
+
+Modifying transaction entries
+
+Challenges with Manual Verification
+
+Time-consuming
+
+Human error
+
+Cannot detect pixel-level or compression-based tampering
+
+👉 Need: An automated AI-based system to detect manipulated bank statements reliably.
+
+Slide 3 – Objective of the Project
+Project Objective
+
+Build an end-to-end AI system that:
+
+Analyzes bank statements (PDF/Image)
+
+Detects digital manipulation
+
+Assigns a clear risk score
+
+Generates a forensic report
+
+Key Goals
+
+Detect subtle tampering invisible to humans
+
+Reduce manual verification effort
+
+Provide explainable forensic evidence
+
+Slide 4 – Solution Overview
+Our Solution
+
+An AI-powered document forensics pipeline that:
+
+✔ Accepts PDF or image bank statements
+✔ Converts PDFs to images
+✔ Applies multiple image forensics techniques
+✔ Uses ML as a supporting signal
+✔ Produces a final risk score (0–100)
+✔ Generates downloadable forensic reports
+
+👉 Acts as a fraud detection layer for banks and fintech platforms.
+
+Slide 5 – High-Level System Architecture
+High-Level Flow
+
+User uploads bank statement
+
+PDF converted to images
+
+Image forensics analysis
+
+Feature aggregation & scoring
+
+Machine Learning signal
+
+Final risk decision & report
+
+Pipeline:
+Upload → Processing → Forensics → Scoring → ML → Report
+
+Slide 6 – Detailed Pipeline (Step-by-Step)
+Step 1: Document Ingestion
+
+User uploads PDF or image
+
+File stored with unique identifier
+
+PDFs converted to images
+
+Step 2: Preprocessing
+
+Image normalization
+
+Noise reduction
+
+Preparation for forensic analysis
+
+Slide 7 – Image Forensics Engine
+Core Forensics Modules
+
+1️⃣ Error Level Analysis (ELA)
+
+Detects recompression differences
+
+Highlights edited regions
+
+2️⃣ Noise Pattern Analysis
+
+Identifies irregular noise caused by edits
+
+3️⃣ Compression Artifact Analysis
+
+Detects partial recompression in documents
+
+4️⃣ Font & Layout Consistency Check
+
+Detects font-size and alignment mismatches
+
+5️⃣ Metadata Analysis
+
+Checks PDF author, producer, timestamps
+
+Identifies editing tools like Photoshop/Canva
+
+Slide 8 – Machine Learning Component
+ML Role in the System
+
+ML is used as a supporting signal, not the sole decision-maker
+
+Trained on synthetic genuine and tampered documents
+
+Learns patterns from forensic features
+
+ML Output
+
+Probability score indicating likelihood of manipulation
+
+Combined with forensic score for final decision
+
+Slide 9 – Scoring & Decision Logic
+Final Decision Strategy
+
+Forensics Score → Primary signal
+
+ML Score → Secondary signal
+
+Combined into a final risk score (0–100)
+
+Risk Categories
+
+Clean Document
+
+Low Risk
+
+Moderate Risk
+
+High Risk
+
+Very High Risk
+
+Critical Risk
+
+Slide 10 – Output & Reporting
+System Output
+
+Final Risk Score (0–100)
+
+Risk Classification
+
+Individual forensic signal values
+
+Downloadable forensic report (JSON)
+
+Downloadable forensic evidence (images)
+
+Benefits
+
+Transparent decision-making
+
+Easy integration into existing workflows
+
+Slide 11 – Dataset & Data Sources
+Data Used (Safe & Ethical)
+
+⚠️ No real customer data used
+
+Dataset Sources
+
+Synthetic bank statement generation
+
+Programmatically created genuine documents
+
+Tampered variants created by:
+
+Editing amounts
+
+Font changes
+
+Recompression
+
+Copy-paste edits
+
+Dataset Size
+
+~200 genuine
+
+~600 manipulated
+
+~800 total samples
+
+Slide 12 – Tech Stack
+Technologies Used
+
+Forensics & ML
+
+Python
+
+OpenCV
+
+PIL
+
+NumPy
+
+scikit-learn
+
+XGBoost / CNN (supporting)
+
+Metadata
+
+PyPDF2
+
+EXIF tools
+
+Web Application
+
+Streamlit
+
+PostgreSQL
+
+Version Control & Deployment
+
+GitHub
+
+Docker (optional)
+
+Slide 13 – Key Achievements
+What We Achieved
+
+✔ Built an end-to-end forensic pipeline
+✔ Detected subtle document manipulations
+✔ Implemented explainable forensic checks
+✔ Designed a working demo web application
+✔ Generated structured forensic reports
+
+Slide 14 – Challenges & Limitations
+Challenges Faced
+
+Calibrating forensic scores across different document types
+
+Differentiating between:
+
+Clean documents
+
+Complex but genuine documents
+
+Sensitivity of ELA and compression metrics
+
+Synthetic data may not cover all real-world cases
+
+Limitations
+
+Model performance depends on quality of synthetic data
+
+Extremely high-quality forgeries may require advanced models
+
+OCR accuracy varies with image quality
+
+Slide 15 – Next Steps & Improvements
+Future Enhancements
+
+Improve forensic calibration using larger datasets
+
+Add deep-learning-based localization of tampered regions
+
+Enhance OCR-based transaction validation
+
+Add confidence explanations for decisions
+
+Deploy as an API for real bank workflows
+
+Extend support to more document types
+
+Slide 16 – Conclusion
+Conclusion
+
+We built an AI-based system that detects manipulated bank statements
+
+Uses image forensics + ML for accurate detection
+
+Produces explainable, risk-based outputs
+
+Can significantly reduce manual verification effort
+
+👉 This system can act as a scalable fraud detection layer for banks and fintech companies.
