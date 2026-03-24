@@ -1,0 +1,65 @@
+
+1. Learning
+   Went through Neo4j GraphAcademy tutorials to understand graph databases, graph modeling, and Cypher query language.
+
+---
+
+2. Initial Implementation
+   Created a basic Knowledge Graph for a fraud detection use case using Neo4j.
+
+Entities (Nodes):
+
+- Person
+- Account
+- Transaction
+- Device
+- Location
+
+Relationships:
+
+- Person → OWNS → Account
+- Account → SENDS → Transaction
+- Transaction → TO → Account
+- Person → USES → Device
+- Device → LOCATED_IN → Location
+
+---
+
+3. Extension of the Graph (Today’s Work)
+
+Extended the existing graph to simulate more realistic and complex fraud scenarios:
+
+- Added new users → Person (User2), Person (User3)
+
+- Added new accounts → Account (A3), Account (A4)
+
+- Added new transactions → Transaction (20000), Transaction (8000)
+
+- Created new ownership links:
+  Person → OWNS → Account (User2 → A3, User3 → A4)
+
+- Extended transaction flows:
+  Account (A3) → SENDS → Transaction → TO → Account (A1)
+  Account (A4) → SENDS → Transaction → TO → Account (A2)
+
+- Introduced shared device pattern (fraud case):
+  Person (User1) → USES → Device (DeviceX)
+  Person (User2) → USES → Device (DeviceX)
+  Person (User3) → USES → Device (DeviceX)
+
+→ This helps in identifying suspicious behavior where multiple users are linked to the same device.
+
+---
+
+4. Analysis using Cypher Queries
+   Used Cypher queries to analyze the graph and detect patterns:
+
+- Identified high-value transactions (amount > 10000)
+- Detected multiple users using the same device
+- Traced multi-hop transaction flows between accounts
+- Analyzed device-location relationships
+
+---
+
+5. Outcome
+   Successfully extended the Knowledge Graph to represent complex relationships and fraud patterns, demonstrating how graph-based modeling helps in detecting anomalies efficiently.
