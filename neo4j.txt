@@ -63,3 +63,26 @@ Extended the existing graph to simulate more realistic and complex fraud scenari
 
 5. Outcome
    Successfully extended the Knowledge Graph to represent complex relationships and fraud patterns, demonstrating how graph-based modeling helps in detecting anomalies efficiently.
+I want to build a simple Python project for a fraud detection Knowledge Graph using Neo4j.
+
+Requirements:
+1. Use Python with neo4j driver to connect to a local Neo4j database.
+2. Create nodes: Person, Account, Transaction, Device, Location.
+3. Create relationships:
+   - Person OWNS Account
+   - Account SENDS Transaction
+   - Transaction TO Account
+   - Person USES Device
+   - Device LOCATED_IN Location
+
+4. Insert sample data with multiple users, accounts, and transactions.
+5. Include a fraud scenario where multiple users use the same device.
+6. Write Python functions to:
+   - Create the graph
+   - Query high-value transactions (>10000)
+   - Detect multiple users using the same device
+   - Trace transaction flows (multi-hop)
+
+7. Print results clearly in the console.
+
+Keep the code simple, well-structured, and ready to run.
