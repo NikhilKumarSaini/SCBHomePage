@@ -86,3 +86,15 @@ Requirements:
 7. Print results clearly in the console.
 
 Keep the code simple, well-structured, and ready to run.
+
+Enhance this project by adding a Streamlit UI.
+
+Requirements:
+- Create buttons for:
+  - Create Graph
+  - Show High Value Transactions
+  - Detect Shared Devices
+  - Show Transaction Flow
+- Display results using tables
+- Keep UI clean and interactive
+- Provide complete runnable Streamlit code
