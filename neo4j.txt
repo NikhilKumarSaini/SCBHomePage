@@ -98,3 +98,6 @@ Requirements:
 - Display results using tables
 - Keep UI clean and interactive
 - Provide complete runnable Streamlit code
+
+
+Knowledge Graph for fraud detection was built using Neo4j, covering entities, relationships, and Cypher queries. Additionally, Copilot was used to generate and structure the project code, along with extending the graph and queries for better analysis.
