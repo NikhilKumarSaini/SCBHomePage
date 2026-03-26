@@ -101,3 +101,7 @@ Requirements:
 
 
 Knowledge Graph for fraud detection was built using Neo4j, covering entities, relationships, and Cypher queries. Additionally, Copilot was used to generate and structure the project code, along with extending the graph and queries for better analysis.
+
+
+
+graph data modeling concepts in Neo4j were explored to better understand how entities and relationships are structured. Additionally, Copilot was used to create an instructions.md file for the fraud detection project, which was integrated and displayed in the frontend for better usability and documentation.
