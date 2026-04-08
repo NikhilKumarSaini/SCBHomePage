@@ -48,3 +48,5 @@ Also provide:
 
 - Step-by-step instructions to run the script
 - Any dependencies (if required)
+
+Extend the existing parser to recursively scan all directories and parse all SAP HANA artifact files (.hdbcalculationview, .hdbtable, .hdbprocedure, .hdbfunction, .hdbview), consolidating the extracted metadata into a single structured JSON output while keeping the current modular design.
